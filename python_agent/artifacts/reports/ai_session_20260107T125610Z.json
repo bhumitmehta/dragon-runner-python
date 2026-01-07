@@ -1,0 +1,83 @@
+{
+  "session_id": "20260107T125610Z",
+  "started_at": "2026-01-07T12:56:10.178728Z",
+  "finished_at": "2026-01-07T13:00:01.043100Z",
+  "mode": "task",
+  "user_task": "Login with bob@example.com and password 10203040. If login option is not available, logout first then login.",
+  "total_actions": 10,
+  "bugs_found": 0,
+  "screens_visited": 9,
+  "actions": [
+    {
+      "action": "click",
+      "locator": "menu item log in",
+      "summary": "Clicked menu item log in",
+      "success": true,
+      "timestamp": "2026-01-07T12:56:15.949840Z"
+    },
+    {
+      "action": "click",
+      "locator": "open menu",
+      "summary": "Clicked open menu",
+      "success": true,
+      "timestamp": "2026-01-07T12:56:44.099751Z"
+    },
+    {
+      "action": "click",
+      "locator": "menu item log in",
+      "summary": "Clicked menu item log in",
+      "success": true,
+      "timestamp": "2026-01-07T12:56:57.868758Z"
+    },
+    {
+      "action": "click",
+      "locator": "open menu",
+      "summary": "Clicked open menu",
+      "success": true,
+      "timestamp": "2026-01-07T12:57:09.509953Z"
+    },
+    {
+      "action": "click",
+      "locator": "menu item log out",
+      "summary": "Clicked menu item log out",
+      "success": true,
+      "timestamp": "2026-01-07T12:57:34.465544Z"
+    },
+    {
+      "action": "click",
+      "locator": "LOG OUT",
+      "summary": "Clicked LOG OUT",
+      "success": true,
+      "timestamp": "2026-01-07T12:57:48.842624Z"
+    },
+    {
+      "action": "click",
+      "locator": "OK",
+      "summary": "Clicked OK",
+      "success": true,
+      "timestamp": "2026-01-07T12:58:03.022979Z"
+    },
+    {
+      "action": "click",
+      "locator": "bob@example.com-autofill",
+      "summary": "Clicked bob@example.com-autofill",
+      "success": true,
+      "timestamp": "2026-01-07T12:58:16.615131Z"
+    },
+    {
+      "action": "click",
+      "locator": "Login button",
+      "summary": "Clicked Login button",
+      "success": true,
+      "timestamp": "2026-01-07T12:58:30.148408Z"
+    },
+    {
+      "action": "click",
+      "locator": "open menu",
+      "summary": "Clicked open menu",
+      "success": true,
+      "timestamp": "2026-01-07T12:58:43.797767Z"
+    }
+  ],
+  "bugs": []
+}

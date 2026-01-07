@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "data": {
+    "first_name": "Test",
+    "last_name": "User",
+    "email": "test.user@example.com",
+    "password": "Passw0rd!"
+  },
+  "workflows": [
+    {
+      "name": "Register (template)",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "open menu",
+          "note": "Open side menu"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "uiautomator",
+          "locator_value": "new UiSelector().textContains(\"SIGN UP\")",
+          "note": "Navigate to sign up / registration screen (adjust locator)"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "uiautomator",
+          "locator_value": "new UiSelector().textContains(\"First Name\")"
+        },
+        {
+          "action": "input",
+          "locator_strategy": "uiautomator",
+          "locator_value": "new UiSelector().textContains(\"First Name\")",
+          "text": "${first_name}"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "uiautomator",
+          "locator_value": "new UiSelector().textContains(\"Last Name\")"
+        },
+        {
+          "action": "input",
+          "locator_strategy": "uiautomator",
+          "locator_value": "new UiSelector().textContains(\"Last Name\")",
+          "text": "${last_name}"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "uiautomator",
+          "locator_value": "new UiSelector().textContains(\"Email\")"
+        },
+        {
+          "action": "input",
+          "locator_strategy": "uiautomator",
+          "locator_value": "new UiSelector().textContains(\"Email\")",
+          "text": "${email}"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "uiautomator",
+          "locator_value": "new UiSelector().textContains(\"Password\")"
+        },
+        {
+          "action": "input",
+          "locator_strategy": "uiautomator",
+          "locator_value": "new UiSelector().textContains(\"Password\")",
+          "text": "${password}"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "uiautomator",
+          "locator_value": "new UiSelector().textContains(\"SIGN UP\")",
+          "note": "Submit registration (adjust locator)"
+        },
+        {
+          "action": "wait",
+          "seconds": 2.0
+        },
+        {
+          "action": "visual_check"
+        }
+      ]
+    }
+  ]
+}

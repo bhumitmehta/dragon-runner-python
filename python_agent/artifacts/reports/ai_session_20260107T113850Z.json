@@ -1,0 +1,111 @@
+{
+  "session_id": "20260107T113850Z",
+  "started_at": "2026-01-07T11:38:50.312010Z",
+  "finished_at": "2026-01-07T11:49:25.505538Z",
+  "mode": "task",
+  "user_task": "Login with bob@example.com and password 10203040",
+  "total_actions": 14,
+  "bugs_found": 0,
+  "screens_visited": 8,
+  "actions": [
+    {
+      "action": "click",
+      "locator": "open menu",
+      "summary": "Clicked open menu",
+      "success": true,
+      "timestamp": "2026-01-07T11:39:20.533071Z"
+    },
+    {
+      "action": "click",
+      "locator": "menu item log in",
+      "summary": "Clicked menu item log in",
+      "success": true,
+      "timestamp": "2026-01-07T11:39:42.917008Z"
+    },
+    {
+      "action": "click",
+      "locator": "open menu",
+      "summary": "Clicked open menu",
+      "success": true,
+      "timestamp": "2026-01-07T11:40:53.106020Z"
+    },
+    {
+      "action": "click",
+      "locator": "menu item log in",
+      "summary": "Clicked menu item log in",
+      "success": true,
+      "timestamp": "2026-01-07T11:42:51.648511Z"
+    },
+    {
+      "action": "click",
+      "locator": "open menu",
+      "summary": "Clicked open menu",
+      "success": true,
+      "timestamp": "2026-01-07T11:43:44.555342Z"
+    },
+    {
+      "action": "click",
+      "locator": "menu item log in",
+      "summary": "Element not found: menu item log in",
+      "success": false,
+      "timestamp": "2026-01-07T11:44:47.019329Z"
+    },
+    {
+      "action": "click",
+      "locator": "open menu",
+      "summary": "Clicked open menu",
+      "success": true,
+      "timestamp": "2026-01-07T11:45:03.500612Z"
+    },
+    {
+      "action": "click",
+      "locator": "menu item log in",
+      "summary": "Element not found: menu item log in",
+      "success": false,
+      "timestamp": "2026-01-07T11:46:37.466769Z"
+    },
+    {
+      "action": "click",
+      "locator": "bob@example.com-autofill",
+      "summary": "Clicked bob@example.com-autofill",
+      "success": true,
+      "timestamp": "2026-01-07T11:46:51.931884Z"
+    },
+    {
+      "action": "click",
+      "locator": "Login button",
+      "summary": "Clicked Login button",
+      "success": true,
+      "timestamp": "2026-01-07T11:48:11.884484Z"
+    },
+    {
+      "action": "click",
+      "locator": "open menu",
+      "summary": "Clicked open menu",
+      "success": true,
+      "timestamp": "2026-01-07T11:48:23.298927Z"
+    },
+    {
+      "action": "click",
+      "locator": "menu item log in",
+      "summary": "Clicked menu item log in",
+      "success": true,
+      "timestamp": "2026-01-07T11:48:45.170175Z"
+    },
+    {
+      "action": "click",
+      "locator": "open menu",
+      "summary": "Clicked open menu",
+      "success": true,
+      "timestamp": "2026-01-07T11:49:03.466089Z"
+    },
+    {
+      "action": "click",
+      "locator": "menu item log in",
+      "summary": "Clicked menu item log in",
+      "success": true,
+      "timestamp": "2026-01-07T11:49:11.900133Z"
+    }
+  ],
+  "bugs": []
+}

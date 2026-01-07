@@ -1,0 +1,993 @@
+{
+  "version": 1,
+  "screens": {
+    "3a6a59a5542221ca": {
+      "last_seen": "2026-01-07T07:20:27.574795Z",
+      "first_seen": "2026-01-07T06:04:43.575119Z",
+      "state_signature": "3a6a59a5542221ca",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "click accessibility_id:menu item log in"
+      ]
+    },
+    "52368c90e8ce98e1": {
+      "last_seen": "2026-01-07T07:20:25.683575Z",
+      "first_seen": "2026-01-07T06:04:45.177277Z",
+      "state_signature": "52368c90e8ce98e1",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s"
+      ]
+    },
+    "308f0ffa4961a352": {
+      "last_seen": "2026-01-07T07:24:53.869832Z",
+      "first_seen": "2026-01-07T06:04:47.149482Z",
+      "state_signature": "308f0ffa4961a352",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "click accessibility_id:menu item log in"
+      ]
+    },
+    "b09d17ebb9246c8b": {
+      "last_seen": "2026-01-07T07:24:52.033904Z",
+      "first_seen": "2026-01-07T06:04:54.024137Z",
+      "state_signature": "b09d17ebb9246c8b",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s"
+      ]
+    },
+    "8e8d131c042c7b1d": {
+      "last_seen": "2026-01-07T06:29:59.108940Z",
+      "first_seen": "2026-01-07T06:09:48.302878Z",
+      "state_signature": "8e8d131c042c7b1d",
+      "path": [
+        "click accessibility_id:open menu"
+      ]
+    },
+    "00388b0031296c04": {
+      "last_seen": "2026-01-07T06:30:01.419413Z",
+      "first_seen": "2026-01-07T06:09:50.790141Z",
+      "state_signature": "00388b0031296c04",
+      "path": [
+        "click accessibility_id:open menu",
+        "click accessibility_id:open menu"
+      ]
+    },
+    "1c7cecc2b73a9991": {
+      "last_seen": "2026-01-07T06:30:07.473250Z",
+      "first_seen": "2026-01-07T06:30:07.281521Z",
+      "state_signature": "1c7cecc2b73a9991",
+      "path": [
+        "click accessibility_id:open menu",
+        "click accessibility_id:open menu",
+        "click accessibility_id:menu item log in",
+        "wait 1.0s",
+        "click accessibility_id:open menu",
+        "click accessibility_id:menu item log out"
+      ]
+    },
+    "4ca70270810e2a62": {
+      "last_seen": "2026-01-07T11:15:40.688462Z",
+      "first_seen": "2026-01-07T07:13:47.891060Z",
+      "state_signature": "4ca70270810e2a62",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s"
+      ]
+    },
+    "79d212f3652c2886": {
+      "last_seen": "2026-01-07T07:13:51.604602Z",
+      "first_seen": "2026-01-07T07:13:50.064607Z",
+      "state_signature": "79d212f3652c2886",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s"
+      ]
+    },
+    "b5683cafbded7dd4": {
+      "last_seen": "2026-01-07T07:24:56.348249Z",
+      "first_seen": "2026-01-07T07:13:55.923819Z",
+      "state_signature": "b5683cafbded7dd4",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "click accessibility_id:menu item log in",
+        "input accessibility_id:Username input field='bob@example.com'"
+      ]
+    },
+    "91ff461aa6cb09ad": {
+      "last_seen": "2026-01-07T07:24:58.416412Z",
+      "first_seen": "2026-01-07T07:13:58.006164Z",
+      "state_signature": "91ff461aa6cb09ad",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "click accessibility_id:menu item log in",
+        "input accessibility_id:Username input field='bob@example.com'",
+        "input accessibility_id:Password input field='10203040'"
+      ]
+    },
+    "fe0af1bb030dfd88": {
+      "last_seen": "2026-01-07T07:15:21.848074Z",
+      "first_seen": "2026-01-07T07:15:05.062718Z",
+      "state_signature": "fe0af1bb030dfd88",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s"
+      ]
+    },
+    "b72b81a15ba7b3d7": {
+      "last_seen": "2026-01-07T07:15:18.582540Z",
+      "first_seen": "2026-01-07T07:15:06.751108Z",
+      "state_signature": "b72b81a15ba7b3d7",
+      "path": []
+    },
+    "d8ad1e85ee1b424f": {
+      "last_seen": "2026-01-07T07:56:15.028608Z",
+      "first_seen": "2026-01-07T07:56:15.028608Z",
+      "state_signature": "d8ad1e85ee1b424f",
+      "path": []
+    },
+    "3ef4ed852a5b4c19": {
+      "last_seen": "2026-01-07T07:56:17.094018Z",
+      "first_seen": "2026-01-07T07:56:17.094018Z",
+      "state_signature": "3ef4ed852a5b4c19",
+      "path": [
+        "click accessibility_id:open menu"
+      ]
+    },
+    "ecfe9c7d8b493426": {
+      "last_seen": "2026-01-07T07:56:19.854906Z",
+      "first_seen": "2026-01-07T07:56:18.599400Z",
+      "state_signature": "ecfe9c7d8b493426",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s"
+      ]
+    },
+    "f956be7b97d1390b": {
+      "last_seen": "2026-01-07T07:58:43.922636Z",
+      "first_seen": "2026-01-07T07:58:43.922636Z",
+      "state_signature": "f956be7b97d1390b",
+      "path": []
+    },
+    "9b9a52a8f5f35d01": {
+      "last_seen": "2026-01-07T07:58:48.001184Z",
+      "first_seen": "2026-01-07T07:58:46.350293Z",
+      "state_signature": "9b9a52a8f5f35d01",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s"
+      ]
+    },
+    "0ac5f38193a0178c": {
+      "last_seen": "2026-01-07T07:58:49.974358Z",
+      "first_seen": "2026-01-07T07:58:49.645713Z",
+      "state_signature": "0ac5f38193a0178c",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "click accessibility_id:menu item log in"
+      ]
+    },
+    "3b2a176b9257aeb3": {
+      "last_seen": "2026-01-07T07:58:52.463056Z",
+      "first_seen": "2026-01-07T07:58:52.233283Z",
+      "state_signature": "3b2a176b9257aeb3",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "click accessibility_id:menu item log in",
+        "input accessibility_id:Username input field='bob@example.com'"
+      ]
+    },
+    "fe9d10ca9ecbec22": {
+      "last_seen": "2026-01-07T07:59:08.024477Z",
+      "first_seen": "2026-01-07T07:58:54.465871Z",
+      "state_signature": "fe9d10ca9ecbec22",
+      "path": []
+    },
+    "33c01f148af32500": {
+      "last_seen": "2026-01-07T07:59:12.117509Z",
+      "first_seen": "2026-01-07T07:59:09.621290Z",
+      "state_signature": "33c01f148af32500",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s"
+      ]
+    },
+    "2f6120cbfe062c22": {
+      "last_seen": "2026-01-07T08:16:01.658070Z",
+      "first_seen": "2026-01-07T08:16:00.968910Z",
+      "state_signature": "2f6120cbfe062c22",
+      "path": []
+    },
+    "496e82bfcada224c": {
+      "last_seen": "2026-01-07T08:16:05.456197Z",
+      "first_seen": "2026-01-07T08:16:03.297188Z",
+      "state_signature": "496e82bfcada224c",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s"
+      ]
+    },
+    "48e565a43ac242fb": {
+      "last_seen": "2026-01-07T10:48:55.361220Z",
+      "first_seen": "2026-01-07T10:48:54.592999Z",
+      "state_signature": "48e565a43ac242fb",
+      "path": []
+    },
+    "c307a1c748192373": {
+      "last_seen": "2026-01-07T11:04:24.914676Z",
+      "first_seen": "2026-01-07T10:48:56.786594Z",
+      "state_signature": "c307a1c748192373",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "click accessibility_id:menu item log in",
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "visual_check"
+      ]
+    },
+    "eca21ccbdc081f3c": {
+      "last_seen": "2026-01-07T11:04:21.629304Z",
+      "first_seen": "2026-01-07T10:49:00.938167Z",
+      "state_signature": "eca21ccbdc081f3c",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "click accessibility_id:menu item log in",
+        "click accessibility_id:open menu"
+      ]
+    },
+    "a735b6de6f6388f0": {
+      "last_seen": "2026-01-07T11:04:25.671291Z",
+      "first_seen": "2026-01-07T11:04:25.671291Z",
+      "state_signature": "a735b6de6f6388f0",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "click accessibility_id:menu item log in",
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "visual_check",
+        "click accessibility_id:menu item webview"
+      ]
+    },
+    "0310d76422784644": {
+      "last_seen": "2026-01-07T11:08:34.301560Z",
+      "first_seen": "2026-01-07T11:04:27.247517Z",
+      "state_signature": "0310d76422784644",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "visual_check",
+        "click accessibility_id:menu item webview",
+        "wait 2.0s",
+        "visual_check"
+      ]
+    },
+    "206e67d45affcf4f": {
+      "last_seen": "2026-01-07T11:08:37.309575Z",
+      "first_seen": "2026-01-07T11:04:31.780517Z",
+      "state_signature": "206e67d45affcf4f",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "visual_check",
+        "click accessibility_id:menu item webview",
+        "wait 2.0s",
+        "visual_check",
+        "click accessibility_id:open menu",
+        "wait 1.0s"
+      ]
+    },
+    "4d27a68083e8bbab": {
+      "last_seen": "2026-01-07T11:08:10.729816Z",
+      "first_seen": "2026-01-07T11:04:35.046830Z",
+      "state_signature": "4d27a68083e8bbab",
+      "path": []
+    },
+    "72cdbdad62e02fbe": {
+      "last_seen": "2026-01-07T11:08:07.690439Z",
+      "first_seen": "2026-01-07T11:04:39.449948Z",
+      "state_signature": "72cdbdad62e02fbe",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s"
+      ]
+    },
+    "5caf4d9e8a85c766": {
+      "last_seen": "2026-01-07T11:07:29.138142Z",
+      "first_seen": "2026-01-07T11:07:27.538206Z",
+      "state_signature": "5caf4d9e8a85c766",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s"
+      ]
+    },
+    "1c91bdd2435f0b65": {
+      "last_seen": "2026-01-07T11:11:38.788708Z",
+      "first_seen": "2026-01-07T11:07:30.732861Z",
+      "state_signature": "1c91bdd2435f0b65",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "click accessibility_id:menu item log in"
+      ]
+    },
+    "7b693eeef855b959": {
+      "last_seen": "2026-01-07T11:07:38.556117Z",
+      "first_seen": "2026-01-07T11:07:37.109855Z",
+      "state_signature": "7b693eeef855b959",
+      "path": [
+        "assert_contains 'Products'",
+        "scroll down",
+        "wait 1.0s"
+      ]
+    },
+    "1db8b531860375b1": {
+      "last_seen": "2026-01-07T11:07:41.757196Z",
+      "first_seen": "2026-01-07T11:07:40.350192Z",
+      "state_signature": "1db8b531860375b1",
+      "path": [
+        "assert_contains 'Products'",
+        "scroll down",
+        "wait 1.0s",
+        "scroll down",
+        "wait 1.0s"
+      ]
+    },
+    "f02a82b6c967d11b": {
+      "last_seen": "2026-01-07T11:07:55.728441Z",
+      "first_seen": "2026-01-07T11:07:54.439911Z",
+      "state_signature": "f02a82b6c967d11b",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s",
+        "visual_check",
+        "scroll down",
+        "wait 1.0s"
+      ]
+    },
+    "73ee10423f5f6f99": {
+      "last_seen": "2026-01-07T11:08:01.175325Z",
+      "first_seen": "2026-01-07T11:07:56.337450Z",
+      "state_signature": "73ee10423f5f6f99",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s",
+        "visual_check",
+        "scroll down",
+        "wait 1.0s",
+        "click accessibility_id:counter plus button",
+        "wait 0.5s",
+        "click accessibility_id:counter plus button",
+        "wait 0.5s",
+        "click accessibility_id:counter minus button",
+        "wait 0.5s",
+        "visual_check"
+      ]
+    },
+    "93f22446bc69c4b1": {
+      "last_seen": "2026-01-07T11:07:59.118187Z",
+      "first_seen": "2026-01-07T11:07:58.055337Z",
+      "state_signature": "93f22446bc69c4b1",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s",
+        "visual_check",
+        "scroll down",
+        "wait 1.0s",
+        "click accessibility_id:counter plus button",
+        "wait 0.5s",
+        "click accessibility_id:counter plus button",
+        "wait 0.5s"
+      ]
+    },
+    "1b8314f1018bcb8c": {
+      "last_seen": "2026-01-07T11:08:14.093108Z",
+      "first_seen": "2026-01-07T11:08:11.478996Z",
+      "state_signature": "1b8314f1018bcb8c",
+      "path": [
+        "click accessibility_id:sort button",
+        "wait 1.0s",
+        "visual_check"
+      ]
+    },
+    "8f94e261eea45bfa": {
+      "last_seen": "2026-01-07T11:08:17.680597Z",
+      "first_seen": "2026-01-07T11:08:14.894512Z",
+      "state_signature": "8f94e261eea45bfa",
+      "path": [
+        "click accessibility_id:sort button",
+        "wait 1.0s",
+        "visual_check",
+        "click accessibility_id:priceAsc",
+        "wait 1.0s",
+        "visual_check"
+      ]
+    },
+    "9ba7adef574b0774": {
+      "last_seen": "2026-01-07T12:32:38.346805Z",
+      "first_seen": "2026-01-07T11:08:18.432027Z",
+      "state_signature": "9ba7adef574b0774",
+      "path": [
+        "click accessibility_id:sort button",
+        "wait 1.0s",
+        "visual_check",
+        "click accessibility_id:priceAsc",
+        "wait 1.0s",
+        "visual_check",
+        "click accessibility_id:sort button",
+        "wait 1.0s"
+      ]
+    },
+    "f68945e0067279b7": {
+      "last_seen": "2026-01-07T11:12:12.648761Z",
+      "first_seen": "2026-01-07T11:08:20.996666Z",
+      "state_signature": "f68945e0067279b7",
+      "path": []
+    },
+    "cf97cf7f6e4b419e": {
+      "last_seen": "2026-01-07T11:11:36.812603Z",
+      "first_seen": "2026-01-07T11:08:27.674084Z",
+      "state_signature": "cf97cf7f6e4b419e",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s"
+      ]
+    },
+    "b80c1d598411dbcf": {
+      "last_seen": "2026-01-07T11:12:16.495049Z",
+      "first_seen": "2026-01-07T11:08:45.288781Z",
+      "state_signature": "b80c1d598411dbcf",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s"
+      ]
+    },
+    "4186815e4d692cd1": {
+      "last_seen": "2026-01-07T11:11:49.540240Z",
+      "first_seen": "2026-01-07T11:11:44.797832Z",
+      "state_signature": "4186815e4d692cd1",
+      "path": [
+        "assert_contains 'Products'",
+        "scroll down",
+        "wait 1.0s",
+        "scroll down",
+        "wait 1.0s"
+      ]
+    },
+    "9310ec732827d4d3": {
+      "last_seen": "2026-01-07T11:12:19.784668Z",
+      "first_seen": "2026-01-07T11:12:03.292369Z",
+      "state_signature": "9310ec732827d4d3",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s",
+        "scroll down",
+        "wait 1.0s"
+      ]
+    },
+    "f4a87c898234921b": {
+      "last_seen": "2026-01-07T11:12:09.883791Z",
+      "first_seen": "2026-01-07T11:12:05.186044Z",
+      "state_signature": "f4a87c898234921b",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s",
+        "visual_check",
+        "scroll down",
+        "wait 1.0s",
+        "click accessibility_id:counter plus button",
+        "wait 0.5s",
+        "click accessibility_id:counter plus button",
+        "wait 0.5s",
+        "click accessibility_id:counter minus button",
+        "wait 0.5s",
+        "visual_check"
+      ]
+    },
+    "7371d1f9068893aa": {
+      "last_seen": "2026-01-07T11:12:07.931894Z",
+      "first_seen": "2026-01-07T11:12:06.867712Z",
+      "state_signature": "7371d1f9068893aa",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s",
+        "visual_check",
+        "scroll down",
+        "wait 1.0s",
+        "click accessibility_id:counter plus button",
+        "wait 0.5s",
+        "click accessibility_id:counter plus button",
+        "wait 0.5s"
+      ]
+    },
+    "ab2c2de1e60ffce1": {
+      "last_seen": "2026-01-07T11:12:22.186152Z",
+      "first_seen": "2026-01-07T11:12:20.534220Z",
+      "state_signature": "ab2c2de1e60ffce1",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s",
+        "scroll down",
+        "wait 1.0s",
+        "click accessibility_id:Add To Cart button",
+        "wait 1.0s"
+      ]
+    },
+    "fc393f6c352a7be0": {
+      "last_seen": "2026-01-07T11:15:04.101386Z",
+      "first_seen": "2026-01-07T11:12:23.076368Z",
+      "state_signature": "fc393f6c352a7be0",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "click accessibility_id:menu item log in",
+        "wait 2.0s",
+        "visual_check"
+      ]
+    },
+    "5718b4c59d3b9837": {
+      "last_seen": "2026-01-07T11:13:20.182127Z",
+      "first_seen": "2026-01-07T11:12:29.868474Z",
+      "state_signature": "5718b4c59d3b9837",
+      "path": [
+        "scroll left",
+        "wait 1.0s",
+        "scroll right",
+        "wait 1.0s",
+        "visual_check"
+      ]
+    },
+    "8a634cce022dd883": {
+      "last_seen": "2026-01-07T12:32:32.057850Z",
+      "first_seen": "2026-01-07T11:12:30.869728Z",
+      "state_signature": "8a634cce022dd883",
+      "path": [
+        "click accessibility_id:sort button",
+        "wait 1.0s",
+        "visual_check"
+      ]
+    },
+    "4ddecc05e11c02e8": {
+      "last_seen": "2026-01-07T11:12:37.377513Z",
+      "first_seen": "2026-01-07T11:12:34.232264Z",
+      "state_signature": "4ddecc05e11c02e8",
+      "path": [
+        "click accessibility_id:sort button",
+        "wait 1.0s",
+        "visual_check",
+        "click accessibility_id:priceAsc",
+        "wait 1.0s",
+        "visual_check"
+      ]
+    },
+    "557eee99f573b377": {
+      "last_seen": "2026-01-07T11:12:49.778242Z",
+      "first_seen": "2026-01-07T11:12:47.637350Z",
+      "state_signature": "557eee99f573b377",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "visual_check"
+      ]
+    },
+    "78815e21bd3bb2f8": {
+      "last_seen": "2026-01-07T11:12:54.332123Z",
+      "first_seen": "2026-01-07T11:12:51.378469Z",
+      "state_signature": "78815e21bd3bb2f8",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "visual_check",
+        "click accessibility_id:menu item webview",
+        "wait 2.0s",
+        "visual_check"
+      ]
+    },
+    "40a90da96f992ab9": {
+      "last_seen": "2026-01-07T11:12:57.487936Z",
+      "first_seen": "2026-01-07T11:12:56.064197Z",
+      "state_signature": "40a90da96f992ab9",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "visual_check",
+        "click accessibility_id:menu item webview",
+        "wait 2.0s",
+        "visual_check",
+        "click accessibility_id:open menu",
+        "wait 1.0s"
+      ]
+    },
+    "04bc35cc6bf9fa91": {
+      "last_seen": "2026-01-07T11:13:10.752118Z",
+      "first_seen": "2026-01-07T11:13:05.591451Z",
+      "state_signature": "04bc35cc6bf9fa91",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s",
+        "scroll up",
+        "wait 0.5s"
+      ]
+    },
+    "827fe6a469d57312": {
+      "last_seen": "2026-01-07T11:15:36.813097Z",
+      "first_seen": "2026-01-07T11:14:52.642265Z",
+      "state_signature": "827fe6a469d57312",
+      "path": []
+    },
+    "d0baa2c9b9ba39f4": {
+      "last_seen": "2026-01-07T11:14:59.136383Z",
+      "first_seen": "2026-01-07T11:14:57.513435Z",
+      "state_signature": "d0baa2c9b9ba39f4",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s"
+      ]
+    },
+    "238e4a3e6e93db28": {
+      "last_seen": "2026-01-07T11:15:14.630315Z",
+      "first_seen": "2026-01-07T11:15:10.039069Z",
+      "state_signature": "238e4a3e6e93db28",
+      "path": [
+        "assert_contains 'Products'",
+        "scroll down",
+        "wait 1.0s",
+        "scroll down",
+        "wait 1.0s"
+      ]
+    },
+    "fa9d546313296393": {
+      "last_seen": "2026-01-07T11:15:43.692514Z",
+      "first_seen": "2026-01-07T11:15:27.617592Z",
+      "state_signature": "fa9d546313296393",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s",
+        "scroll down",
+        "wait 1.0s"
+      ]
+    },
+    "17fd8785b6b11b79": {
+      "last_seen": "2026-01-07T11:15:33.999294Z",
+      "first_seen": "2026-01-07T11:15:29.504052Z",
+      "state_signature": "17fd8785b6b11b79",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s",
+        "visual_check",
+        "scroll down",
+        "wait 1.0s",
+        "click accessibility_id:counter plus button",
+        "wait 0.5s",
+        "click accessibility_id:counter plus button",
+        "wait 0.5s",
+        "click accessibility_id:counter minus button",
+        "wait 0.5s",
+        "visual_check"
+      ]
+    },
+    "c44188918d444d84": {
+      "last_seen": "2026-01-07T11:15:32.145378Z",
+      "first_seen": "2026-01-07T11:15:31.135309Z",
+      "state_signature": "c44188918d444d84",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s",
+        "visual_check",
+        "scroll down",
+        "wait 1.0s",
+        "click accessibility_id:counter plus button",
+        "wait 0.5s",
+        "click accessibility_id:counter plus button",
+        "wait 0.5s"
+      ]
+    },
+    "6c6a44decb1d6c28": {
+      "last_seen": "2026-01-07T11:15:45.944083Z",
+      "first_seen": "2026-01-07T11:15:44.400315Z",
+      "state_signature": "6c6a44decb1d6c28",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s",
+        "scroll down",
+        "wait 1.0s",
+        "click accessibility_id:Add To Cart button",
+        "wait 1.0s"
+      ]
+    },
+    "429fd0b256e66fd2": {
+      "last_seen": "2026-01-07T11:15:50.453070Z",
+      "first_seen": "2026-01-07T11:15:46.766202Z",
+      "state_signature": "429fd0b256e66fd2",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s",
+        "scroll down",
+        "wait 1.0s",
+        "click accessibility_id:Add To Cart button",
+        "wait 1.0s",
+        "click accessibility_id:cart badge",
+        "wait 2.0s",
+        "assert_contains 'My Cart'",
+        "visual_check"
+      ]
+    },
+    "3728f52452784abe": {
+      "last_seen": "2026-01-07T11:16:00.912721Z",
+      "first_seen": "2026-01-07T11:15:53.532140Z",
+      "state_signature": "3728f52452784abe",
+      "path": [
+        "click accessibility_id:sort button",
+        "wait 1.0s",
+        "visual_check",
+        "click accessibility_id:priceAsc",
+        "wait 1.0s",
+        "visual_check"
+      ]
+    },
+    "2dedaa993c32011a": {
+      "last_seen": "2026-01-07T12:32:12.564413Z",
+      "first_seen": "2026-01-07T11:16:04.342980Z",
+      "state_signature": "2dedaa993c32011a",
+      "path": []
+    },
+    "559743a5b2c69ffe": {
+      "last_seen": "2026-01-07T11:16:13.264391Z",
+      "first_seen": "2026-01-07T11:16:11.070184Z",
+      "state_signature": "559743a5b2c69ffe",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "visual_check"
+      ]
+    },
+    "7a114f8fbf22fb77": {
+      "last_seen": "2026-01-07T11:16:17.695545Z",
+      "first_seen": "2026-01-07T11:16:14.844366Z",
+      "state_signature": "7a114f8fbf22fb77",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "visual_check",
+        "click accessibility_id:menu item webview",
+        "wait 2.0s",
+        "visual_check"
+      ]
+    },
+    "d569ad3e10c9ddb4": {
+      "last_seen": "2026-01-07T11:16:20.656755Z",
+      "first_seen": "2026-01-07T11:16:19.230552Z",
+      "state_signature": "d569ad3e10c9ddb4",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "visual_check",
+        "click accessibility_id:menu item webview",
+        "wait 2.0s",
+        "visual_check",
+        "click accessibility_id:open menu",
+        "wait 1.0s"
+      ]
+    },
+    "72d478b622cc4db8": {
+      "last_seen": "2026-01-07T12:32:16.380982Z",
+      "first_seen": "2026-01-07T11:16:28.471307Z",
+      "state_signature": "72d478b622cc4db8",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s"
+      ]
+    },
+    "cbaacd86ac5bd471": {
+      "last_seen": "2026-01-07T12:31:32.899535Z",
+      "first_seen": "2026-01-07T12:31:32.899535Z",
+      "state_signature": "cbaacd86ac5bd471",
+      "path": []
+    },
+    "90742e8f07bd38bc": {
+      "last_seen": "2026-01-07T12:31:37.116194Z",
+      "first_seen": "2026-01-07T12:31:37.116194Z",
+      "state_signature": "90742e8f07bd38bc",
+      "path": []
+    },
+    "82a6c6da0d430d86": {
+      "last_seen": "2026-01-07T12:31:45.850579Z",
+      "first_seen": "2026-01-07T12:31:44.399217Z",
+      "state_signature": "82a6c6da0d430d86",
+      "path": [
+        "assert_contains 'Products'",
+        "scroll down",
+        "wait 1.0s"
+      ]
+    },
+    "220aae9cabf57522": {
+      "last_seen": "2026-01-07T12:31:49.191507Z",
+      "first_seen": "2026-01-07T12:31:47.671490Z",
+      "state_signature": "220aae9cabf57522",
+      "path": [
+        "assert_contains 'Products'",
+        "scroll down",
+        "wait 1.0s",
+        "scroll down",
+        "wait 1.0s"
+      ]
+    },
+    "03791739769d881a": {
+      "last_seen": "2026-01-07T12:31:53.373213Z",
+      "first_seen": "2026-01-07T12:31:51.309832Z",
+      "state_signature": "03791739769d881a",
+      "path": [
+        "assert_contains 'Products'",
+        "scroll down",
+        "wait 1.0s",
+        "scroll down",
+        "wait 1.0s",
+        "scroll up",
+        "wait 1.0s",
+        "visual_check"
+      ]
+    },
+    "2478116d2bec39e4": {
+      "last_seen": "2026-01-07T12:32:19.117303Z",
+      "first_seen": "2026-01-07T12:32:02.922901Z",
+      "state_signature": "2478116d2bec39e4",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s",
+        "scroll down",
+        "wait 1.0s"
+      ]
+    },
+    "75c9b0a2a310ff52": {
+      "last_seen": "2026-01-07T12:32:09.726103Z",
+      "first_seen": "2026-01-07T12:32:04.856310Z",
+      "state_signature": "75c9b0a2a310ff52",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s",
+        "visual_check",
+        "scroll down",
+        "wait 1.0s",
+        "click accessibility_id:counter plus button",
+        "wait 0.5s",
+        "click accessibility_id:counter plus button",
+        "wait 0.5s",
+        "click accessibility_id:counter minus button",
+        "wait 0.5s",
+        "visual_check"
+      ]
+    },
+    "15d3ebb235a31410": {
+      "last_seen": "2026-01-07T12:32:07.630257Z",
+      "first_seen": "2026-01-07T12:32:06.535797Z",
+      "state_signature": "15d3ebb235a31410",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s",
+        "visual_check",
+        "scroll down",
+        "wait 1.0s",
+        "click accessibility_id:counter plus button",
+        "wait 0.5s",
+        "click accessibility_id:counter plus button",
+        "wait 0.5s"
+      ]
+    },
+    "9ecee381af49d3be": {
+      "last_seen": "2026-01-07T12:32:21.376167Z",
+      "first_seen": "2026-01-07T12:32:19.807465Z",
+      "state_signature": "9ecee381af49d3be",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s",
+        "scroll down",
+        "wait 1.0s",
+        "click accessibility_id:Add To Cart button",
+        "wait 1.0s"
+      ]
+    },
+    "3f67bda10e61acc9": {
+      "last_seen": "2026-01-07T12:32:25.813226Z",
+      "first_seen": "2026-01-07T12:32:22.194796Z",
+      "state_signature": "3f67bda10e61acc9",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s",
+        "scroll down",
+        "wait 1.0s",
+        "click accessibility_id:Add To Cart button",
+        "wait 1.0s",
+        "click accessibility_id:cart badge",
+        "wait 2.0s",
+        "assert_contains 'My Cart'",
+        "visual_check"
+      ]
+    },
+    "3283f55f97d6758b": {
+      "last_seen": "2026-01-07T12:33:19.627827Z",
+      "first_seen": "2026-01-07T12:32:28.694449Z",
+      "state_signature": "3283f55f97d6758b",
+      "path": [
+        "scroll left",
+        "wait 1.0s",
+        "scroll right",
+        "wait 1.0s",
+        "visual_check"
+      ]
+    },
+    "9515a664660bf1aa": {
+      "last_seen": "2026-01-07T12:32:35.812616Z",
+      "first_seen": "2026-01-07T12:32:32.835633Z",
+      "state_signature": "9515a664660bf1aa",
+      "path": [
+        "click accessibility_id:sort button",
+        "wait 1.0s",
+        "visual_check",
+        "click accessibility_id:priceAsc",
+        "wait 1.0s",
+        "visual_check"
+      ]
+    },
+    "1c268f73bdf7a027": {
+      "last_seen": "2026-01-07T12:32:48.345434Z",
+      "first_seen": "2026-01-07T12:32:46.197804Z",
+      "state_signature": "1c268f73bdf7a027",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "visual_check"
+      ]
+    },
+    "0f2179f0be55f792": {
+      "last_seen": "2026-01-07T12:32:52.784052Z",
+      "first_seen": "2026-01-07T12:32:49.910045Z",
+      "state_signature": "0f2179f0be55f792",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "visual_check",
+        "click accessibility_id:menu item webview",
+        "wait 2.0s",
+        "visual_check"
+      ]
+    },
+    "fe1dddcc0dcf7a3d": {
+      "last_seen": "2026-01-07T12:32:55.747922Z",
+      "first_seen": "2026-01-07T12:32:54.317411Z",
+      "state_signature": "fe1dddcc0dcf7a3d",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "visual_check",
+        "click accessibility_id:menu item webview",
+        "wait 2.0s",
+        "visual_check",
+        "click accessibility_id:open menu",
+        "wait 1.0s"
+      ]
+    },
+    "a67df834d2dce8c7": {
+      "last_seen": "2026-01-07T12:33:10.257429Z",
+      "first_seen": "2026-01-07T12:33:03.678991Z",
+      "state_signature": "a67df834d2dce8c7",
+      "path": [
+        "click accessibility_id:store item",
+        "wait 2.0s",
+        "scroll up",
+        "wait 0.5s",
+        "click accessibility_id:gray circle",
+        "wait 0.5s",
+        "visual_check"
+      ]
+    }
+  }
+}

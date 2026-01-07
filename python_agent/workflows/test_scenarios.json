@@ -1,0 +1,385 @@
+{
+  "version": 1,
+  "data": {
+    "username": "bob@example.com",
+    "password": "10203040"
+  },
+  "workflows": [
+    {
+      "name": "Reset App State",
+      "steps": [
+        {
+          "action": "reset",
+          "note": "Reset the app to its initial state"
+        }
+      ]
+    },
+    {
+      "name": "Login Flow",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "open menu",
+          "note": "Open side menu"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0,
+          "note": "Wait for menu animation"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "menu item log in",
+          "note": "Navigate to login screen"
+        },
+        {
+          "action": "wait",
+          "seconds": 2.0,
+          "note": "Wait for login screen"
+        },
+        {
+          "action": "visual_check",
+          "note": "Check login screen layout"
+        }
+      ]
+    },
+    {
+      "name": "Explore Product Catalog with Scroll",
+      "steps": [
+        {
+          "action": "assert_contains",
+          "assert_contains": "Products",
+          "note": "Verify we are on the product screen"
+        },
+        {
+          "action": "scroll",
+          "direction": "down",
+          "note": "Scroll down to see more products"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "scroll",
+          "direction": "down",
+          "note": "Scroll down again"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "scroll",
+          "direction": "up",
+          "note": "Scroll back up"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Check for visual bugs after scrolling"
+        }
+      ]
+    },
+    {
+      "name": "View Product Details",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "store item",
+          "note": "Click on the first product"
+        },
+        {
+          "action": "wait",
+          "seconds": 2.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Check product detail page layout"
+        },
+        {
+          "action": "scroll",
+          "direction": "down",
+          "note": "Scroll to see full product details"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "counter plus button",
+          "note": "Increase quantity"
+        },
+        {
+          "action": "wait",
+          "seconds": 0.5
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "counter plus button",
+          "note": "Increase quantity again"
+        },
+        {
+          "action": "wait",
+          "seconds": 0.5
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "counter minus button",
+          "note": "Decrease quantity"
+        },
+        {
+          "action": "wait",
+          "seconds": 0.5
+        },
+        {
+          "action": "visual_check",
+          "note": "Check quantity counter display"
+        }
+      ]
+    },
+    {
+      "name": "Add to Cart Flow",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "store item",
+          "note": "Click on a product"
+        },
+        {
+          "action": "wait",
+          "seconds": 2.0
+        },
+        {
+          "action": "scroll",
+          "direction": "down",
+          "note": "Scroll down to see Add to Cart button"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Add To Cart button",
+          "note": "Add product to cart"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "cart badge",
+          "note": "Open cart"
+        },
+        {
+          "action": "wait",
+          "seconds": 2.0
+        },
+        {
+          "action": "assert_contains",
+          "assert_contains": "My Cart",
+          "note": "Verify we are on cart screen"
+        },
+        {
+          "action": "visual_check",
+          "note": "Check cart page layout"
+        }
+      ]
+    },
+    {
+      "name": "Sort Products",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "sort button",
+          "note": "Open sort options"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Check sort options modal"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "priceAsc",
+          "note": "Sort by price low to high"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Check products sorted by price ascending"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "sort button",
+          "note": "Open sort options again"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "priceDesc",
+          "note": "Sort by price high to low"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Check products sorted by price descending"
+        }
+      ]
+    },
+    {
+      "name": "Navigation Menu Items",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "open menu",
+          "note": "Open side menu"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Check menu layout"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "menu item webview",
+          "note": "Navigate to webview"
+        },
+        {
+          "action": "wait",
+          "seconds": 2.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Check webview page"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "open menu",
+          "note": "Open menu again"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "menu item catalog",
+          "note": "Go back to catalog"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "assert_contains",
+          "assert_contains": "Products",
+          "note": "Verify back on catalog"
+        }
+      ]
+    },
+    {
+      "name": "Color Selection on Product",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "store item",
+          "note": "Click on a product"
+        },
+        {
+          "action": "wait",
+          "seconds": 2.0
+        },
+        {
+          "action": "scroll",
+          "direction": "up",
+          "note": "Scroll up to see color options"
+        },
+        {
+          "action": "wait",
+          "seconds": 0.5
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "gray circle",
+          "note": "Select gray color"
+        },
+        {
+          "action": "wait",
+          "seconds": 0.5
+        },
+        {
+          "action": "visual_check",
+          "note": "Check gray color selected"
+        }
+      ]
+    },
+    {
+      "name": "Swipe Left Right on Products",
+      "steps": [
+        {
+          "action": "scroll",
+          "direction": "left",
+          "note": "Swipe left"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "scroll",
+          "direction": "right",
+          "note": "Swipe right"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Check page after horizontal swipes"
+        }
+      ]
+    }
+  ]
+}

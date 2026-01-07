@@ -1,0 +1,12 @@
+{
+  "session_id": "20260107T130005Z",
+  "started_at": "2026-01-07T13:00:05.672039Z",
+  "finished_at": "2026-01-07T13:00:34.012902Z",
+  "mode": "task",
+  "user_task": "Login with bob@example.com and password 10203040. If login option is not available, logout first then login.",
+  "total_actions": 0,
+  "bugs_found": 0,
+  "screens_visited": 1,
+  "actions": [],
+  "bugs": []
+}

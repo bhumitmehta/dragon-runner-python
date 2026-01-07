@@ -1,0 +1,992 @@
+{
+  "version": 2,
+  "description": "Comprehensive AI-driven test scenarios for MyDemoApp",
+  "data": {
+    "username": "bob@example.com",
+    "password": "10203040",
+    "invalid_email": "invalid-email",
+    "invalid_password": "wrong123",
+    "search_term": "Backpack",
+    "checkout_name": "John Doe",
+    "checkout_address": "123 Test Street",
+    "checkout_city": "Test City",
+    "checkout_zip": "12345",
+    "checkout_country": "USA"
+  },
+  "workflows": [
+    {
+      "name": "Reset App State",
+      "priority": "critical",
+      "steps": [
+        {
+          "action": "reset",
+          "note": "Reset the app to ensure clean state"
+        }
+      ]
+    },
+    {
+      "name": "Product Catalog - Browse and Scroll",
+      "priority": "high",
+      "description": "Verify product catalog displays correctly and scrolling works",
+      "steps": [
+        {
+          "action": "assert_contains",
+          "assert_contains": "Products",
+          "note": "Verify home screen shows Products"
+        },
+        {
+          "action": "visual_check",
+          "note": "Check product grid layout"
+        },
+        {
+          "action": "scroll",
+          "direction": "down",
+          "note": "Scroll to load more products"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "scroll",
+          "direction": "down",
+          "note": "Scroll more"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "scroll",
+          "direction": "up",
+          "note": "Scroll back up"
+        },
+        {
+          "action": "visual_check",
+          "note": "Verify scroll state preserved"
+        }
+      ]
+    },
+    {
+      "name": "Product Details - View and Interact",
+      "priority": "high",
+      "description": "Test product detail page interactions",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "store item",
+          "note": "Open first product"
+        },
+        {
+          "action": "wait",
+          "seconds": 2.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Check product detail layout"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "counter plus button",
+          "note": "Increase quantity"
+        },
+        {
+          "action": "wait",
+          "seconds": 0.5
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "counter plus button",
+          "note": "Increase again"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "counter minus button",
+          "note": "Decrease quantity"
+        },
+        {
+          "action": "visual_check",
+          "note": "Verify quantity counter shows correct value"
+        },
+        {
+          "action": "scroll",
+          "direction": "down",
+          "note": "Scroll to see full details"
+        },
+        {
+          "action": "scroll",
+          "direction": "down",
+          "note": "Scroll to Add to Cart"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Add To Cart button",
+          "note": "Add product to cart"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Check cart badge updated"
+        }
+      ]
+    },
+    {
+      "name": "Shopping Cart - Full Flow",
+      "priority": "critical",
+      "description": "Test complete cart functionality",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "store item",
+          "note": "Open a product"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.5
+        },
+        {
+          "action": "scroll",
+          "direction": "down"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Add To Cart button",
+          "note": "Add to cart"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "cart badge",
+          "note": "Go to cart"
+        },
+        {
+          "action": "wait",
+          "seconds": 2.0
+        },
+        {
+          "action": "assert_contains",
+          "assert_contains": "My Cart",
+          "note": "Verify cart screen"
+        },
+        {
+          "action": "visual_check",
+          "note": "Check cart item display"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "counter plus button",
+          "note": "Increase quantity in cart"
+        },
+        {
+          "action": "wait",
+          "seconds": 0.5
+        },
+        {
+          "action": "visual_check",
+          "note": "Verify price updated"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "remove item",
+          "note": "Remove item from cart"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Check empty cart state"
+        }
+      ]
+    },
+    {
+      "name": "Sort Products - All Options",
+      "priority": "medium",
+      "description": "Test all sorting options",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "sort button",
+          "note": "Open sort modal"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Check sort options modal"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "nameAsc",
+          "note": "Sort by name A-Z"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Verify alphabetical order"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "sort button",
+          "note": "Open sort again"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "nameDesc",
+          "note": "Sort by name Z-A"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "sort button",
+          "note": "Open sort again"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "priceAsc",
+          "note": "Sort by price low-high"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Verify price order ascending"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "sort button",
+          "note": "Open sort again"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "priceDesc",
+          "note": "Sort by price high-low"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Verify price order descending"
+        }
+      ]
+    },
+    {
+      "name": "Navigation Menu - All Items",
+      "priority": "high",
+      "description": "Test all navigation menu items",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "open menu",
+          "note": "Open side menu"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Check menu layout"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "menu item webview",
+          "note": "Go to WebView"
+        },
+        {
+          "action": "wait",
+          "seconds": 3.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Check WebView loaded"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "open menu",
+          "note": "Open menu"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "menu item geo location",
+          "note": "Go to Geo Location"
+        },
+        {
+          "action": "wait",
+          "seconds": 2.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Check Geo Location screen"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "open menu",
+          "note": "Open menu"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "menu item drawing",
+          "note": "Go to Drawing"
+        },
+        {
+          "action": "wait",
+          "seconds": 2.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Check Drawing screen"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "open menu",
+          "note": "Open menu"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "menu item about",
+          "note": "Go to About"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Check About screen"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "open menu",
+          "note": "Back to menu"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "menu item catalog",
+          "note": "Return to catalog"
+        }
+      ]
+    },
+    {
+      "name": "Login Flow - Valid Credentials",
+      "priority": "critical",
+      "description": "Test successful login flow",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "open menu",
+          "note": "Open menu"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "menu item log in",
+          "note": "Go to login"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.5
+        },
+        {
+          "action": "input",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Username input field",
+          "text": "${username}",
+          "note": "Enter username"
+        },
+        {
+          "action": "input",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Password input field",
+          "text": "${password}",
+          "note": "Enter password"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Login button",
+          "note": "Submit login"
+        },
+        {
+          "action": "wait",
+          "seconds": 2.0
+        },
+        {
+          "action": "assert_contains",
+          "assert_contains": "Products",
+          "note": "Verify logged in and on products"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "open menu",
+          "note": "Open menu to verify logged in state"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Verify logout option visible"
+        }
+      ]
+    },
+    {
+      "name": "Login Flow - Invalid Credentials",
+      "priority": "high",
+      "description": "Test login with invalid credentials shows error",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "open menu",
+          "note": "Open menu"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "menu item log in",
+          "note": "Go to login"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.5
+        },
+        {
+          "action": "input",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Username input field",
+          "text": "${invalid_email}",
+          "note": "Enter invalid email"
+        },
+        {
+          "action": "input",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Password input field",
+          "text": "${invalid_password}",
+          "note": "Enter invalid password"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Login button",
+          "note": "Submit login"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.5
+        },
+        {
+          "action": "visual_check",
+          "note": "Check error message displayed"
+        }
+      ]
+    },
+    {
+      "name": "Login Flow - Empty Fields Validation",
+      "priority": "medium",
+      "description": "Test login validation for empty fields",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "open menu",
+          "note": "Open menu"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "menu item log in",
+          "note": "Go to login"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.5
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Login button",
+          "note": "Click login without entering credentials"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Check validation error for empty fields"
+        }
+      ]
+    },
+    {
+      "name": "Product Colors - Selection",
+      "priority": "medium",
+      "description": "Test color selection on product detail",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "store item",
+          "note": "Open product"
+        },
+        {
+          "action": "wait",
+          "seconds": 2.0
+        },
+        {
+          "action": "scroll",
+          "direction": "up",
+          "note": "Scroll to color options"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "gray circle",
+          "note": "Select gray color"
+        },
+        {
+          "action": "wait",
+          "seconds": 0.5
+        },
+        {
+          "action": "visual_check",
+          "note": "Verify color selection highlighted"
+        }
+      ]
+    },
+    {
+      "name": "Product Reviews - Star Rating",
+      "priority": "low",
+      "description": "Test star rating interaction",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "store item",
+          "note": "Open product"
+        },
+        {
+          "action": "wait",
+          "seconds": 2.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "review star 1",
+          "note": "Click first star"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "review star 3",
+          "note": "Click third star"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "review star 5",
+          "note": "Click fifth star"
+        },
+        {
+          "action": "visual_check",
+          "note": "Verify star rating interaction"
+        }
+      ]
+    },
+    {
+      "name": "Checkout Flow - Complete",
+      "priority": "critical",
+      "description": "Test full checkout process",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "store item",
+          "note": "Select a product"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.5
+        },
+        {
+          "action": "scroll",
+          "direction": "down"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Add To Cart button",
+          "note": "Add to cart"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "cart badge",
+          "note": "Go to cart"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.5
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Proceed To Checkout button",
+          "note": "Start checkout"
+        },
+        {
+          "action": "wait",
+          "seconds": 2.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Verify checkout form displayed"
+        },
+        {
+          "action": "input",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Full Name* input field",
+          "text": "${checkout_name}",
+          "note": "Enter name"
+        },
+        {
+          "action": "input",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Address Line 1* input field",
+          "text": "${checkout_address}",
+          "note": "Enter address"
+        },
+        {
+          "action": "input",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "City* input field",
+          "text": "${checkout_city}",
+          "note": "Enter city"
+        },
+        {
+          "action": "input",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Zip Code* input field",
+          "text": "${checkout_zip}",
+          "note": "Enter zip"
+        },
+        {
+          "action": "input",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Country* input field",
+          "text": "${checkout_country}",
+          "note": "Enter country"
+        },
+        {
+          "action": "scroll",
+          "direction": "down"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "To Payment button",
+          "note": "Continue to payment"
+        },
+        {
+          "action": "wait",
+          "seconds": 2.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Verify payment form displayed"
+        }
+      ]
+    },
+    {
+      "name": "Swipe Gestures - Horizontal",
+      "priority": "medium",
+      "description": "Test horizontal swipe gestures",
+      "steps": [
+        {
+          "action": "scroll",
+          "direction": "left",
+          "note": "Swipe left"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "scroll",
+          "direction": "right",
+          "note": "Swipe right"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "visual_check",
+          "note": "Verify swipe behavior"
+        }
+      ]
+    },
+    {
+      "name": "Logout Flow",
+      "priority": "high",
+      "description": "Test logout after login",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "open menu",
+          "note": "Open menu"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "menu item log in",
+          "note": "Go to login"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.5
+        },
+        {
+          "action": "input",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Username input field",
+          "text": "${username}",
+          "note": "Enter username"
+        },
+        {
+          "action": "input",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Password input field",
+          "text": "${password}",
+          "note": "Enter password"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Login button",
+          "note": "Submit login"
+        },
+        {
+          "action": "wait",
+          "seconds": 2.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "open menu",
+          "note": "Open menu after login"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "menu item log out",
+          "note": "Click logout"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "id",
+          "locator_value": "android:id/button1",
+          "note": "Confirm logout"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.5
+        },
+        {
+          "action": "visual_check",
+          "note": "Verify logged out state"
+        }
+      ]
+    },
+    {
+      "name": "Multiple Products to Cart",
+      "priority": "high",
+      "description": "Test adding multiple different products to cart",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "store item",
+          "note": "Click first product"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.5
+        },
+        {
+          "action": "scroll",
+          "direction": "down"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Add To Cart button",
+          "note": "Add first product"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "navigate back",
+          "note": "Go back"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "scroll",
+          "direction": "down"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "store item",
+          "note": "Click second product"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.5
+        },
+        {
+          "action": "scroll",
+          "direction": "down"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "Add To Cart button",
+          "note": "Add second product"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        },
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "cart badge",
+          "note": "Open cart"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.5
+        },
+        {
+          "action": "visual_check",
+          "note": "Verify cart has multiple items"
+        }
+      ]
+    }
+  ]
+}

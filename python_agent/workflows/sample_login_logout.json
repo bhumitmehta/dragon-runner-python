@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "data": {
+    "username": "bob@example.com",
+    "password": "10203040"
+  },
+  "workflows": [
+    {
+      "name": "Login (template)",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "open menu",
+          "note": "Open side menu"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "uiautomator",
+          "locator_value": "new UiSelector().textContains(\"LOG IN\")",
+          "note": "Tap the menu item that navigates to login (adjust if text differs)"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "uiautomator",
+          "locator_value": "new UiSelector().textContains(\"Username\")",
+          "note": "Focus username field (adjust locator to your screen)"
+        },
+        {
+          "action": "input",
+          "locator_strategy": "uiautomator",
+          "locator_value": "new UiSelector().textContains(\"Username\")",
+          "text": "${username}",
+          "note": "Type username"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "uiautomator",
+          "locator_value": "new UiSelector().textContains(\"Password\")",
+          "note": "Focus password field (adjust locator to your screen)"
+        },
+        {
+          "action": "input",
+          "locator_strategy": "uiautomator",
+          "locator_value": "new UiSelector().textContains(\"Password\")",
+          "text": "${password}",
+          "note": "Type password"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "uiautomator",
+          "locator_value": "new UiSelector().textContains(\"LOGIN\")",
+          "note": "Submit login (adjust locator if needed)"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.5,
+          "note": "Wait for navigation"
+        },
+        {
+          "action": "visual_check",
+          "note": "Optional vision-based UI bug check (skips automatically if quota/unavailable)"
+        }
+      ]
+    },
+    {
+      "name": "Logout (template)",
+      "steps": [
+        {
+          "action": "click",
+          "locator_strategy": "accessibility_id",
+          "locator_value": "open menu",
+          "note": "Open side menu"
+        },
+        {
+          "action": "click",
+          "locator_strategy": "uiautomator",
+          "locator_value": "new UiSelector().textContains(\"LOGOUT\")",
+          "note": "Tap logout (adjust locator if needed)"
+        },
+        {
+          "action": "wait",
+          "seconds": 1.0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "run_id": "20260107T062952Z",
+  "started_at": "2026-01-07T06:29:52.931603Z",
+  "workflow_file": "C:\\Users\\20092\\Desktop\\prooject\\ai-projects\\dragon-runner-python\\python_agent\\workflows\\test_scenarios.json",
+  "use_vision": false,
+  "device": "emulator-5554",
+  "appium_server_url": "http://127.0.0.1:4723/wd/hub",
+  "app": {
+    "package": "com.saucelabs.mydemoapp.rn",
+    "activity": ".MainActivity"
+  },
+  "workflows": [
+    {
+      "name": "01 - Login",
+      "status": "failed",
+      "steps": [
+        {
+          "index": 1,
+          "action": "click",
+          "status": "passed",
+          "summary": "click ok",
+          "error": null,
+          "screenshot": "C:\\Users\\20092\\Desktop\\prooject\\ai-projects\\dragon-runner-python\\python_agent\\artifacts\\screenshots\\wf_step_01_after.png",
+          "state_signature": "8e8d131c042c7b1d",
+          "note": "Open the left menu"
+        },
+        {
+          "index": 2,
+          "action": "click",
+          "status": "failed",
+          "summary": "click",
+          "error": "Element not found (strategy=accessibility_id, value=menu item log in) | hints={\"clickable_accessibility_ids\": [\"cart badge\", \"longpress reset app\", \"open menu\", \"review star 1\", \"review star 2\", \"review star 3\", \"review star 4\", \"review star 5\", \"sort button\"], \"clickable_resource_ids\": [], \"clickable_texts\": []}",
+          "screenshot": "C:\\Users\\20092\\Desktop\\prooject\\ai-projects\\dragon-runner-python\\python_agent\\artifacts\\screenshots\\wf_step_02_before.png",
+          "state_signature": "8e8d131c042c7b1d",
+          "note": "Open the Login screen (based on clickable hints)"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "name": "02 - Register (template)",
+      "status": "failed",
+      "steps": [
+        {
+          "index": 1,
+          "action": "click",
+          "status": "passed",
+          "summary": "click ok",
+          "error": null,
+          "screenshot": "C:\\Users\\20092\\Desktop\\prooject\\ai-projects\\dragon-runner-python\\python_agent\\artifacts\\screenshots\\wf_step_01_after.png",
+          "state_signature": "00388b0031296c04",
+          "note": null
+        },
+        {
+          "index": 2,
+          "action": "click",
+          "status": "passed",
+          "summary": "click ok",
+          "error": null,
+          "screenshot": "C:\\Users\\20092\\Desktop\\prooject\\ai-projects\\dragon-runner-python\\python_agent\\artifacts\\screenshots\\wf_step_02_after.png",
+          "state_signature": "308f0ffa4961a352",
+          "note": "Many apps put Sign Up on the Login screen"
+        },
+        {
+          "index": 3,
+          "action": "wait",
+          "status": "passed",
+          "summary": "wait 1.0s",
+          "error": null,
+          "screenshot": "C:\\Users\\20092\\Desktop\\prooject\\ai-projects\\dragon-runner-python\\python_agent\\artifacts\\screenshots\\wf_step_03_before.png",
+          "state_signature": "308f0ffa4961a352",
+          "note": null
+        },
+        {
+          "index": 4,
+          "action": "click",
+          "status": "failed",
+          "summary": "click",
+          "error": "Element not found (strategy=uiautomator, value=new UiSelector().textContains(\"SIGN UP\")) | hints={\"clickable_accessibility_ids\": [\"Login button\", \"Password input field\", \"Username input field\", \"alice@example.com (locked out)-autofill\", \"bob@example.com-autofill\", \"cart badge\", \"longpress reset app\", \"open menu\"], \"clickable_resource_ids\": [], \"clickable_texts\": []}",
+          "screenshot": "C:\\Users\\20092\\Desktop\\prooject\\ai-projects\\dragon-runner-python\\python_agent\\artifacts\\screenshots\\wf_step_04_before.png",
+          "state_signature": "308f0ffa4961a352",
+          "note": "Switch to registration tab/screen if present (adjust if needed)"
+        }
+      ],
+      "bugs": []
+    },
+    {
+      "name": "03 - Logout",
+      "status": "passed",
+      "steps": [
+        {
+          "index": 1,
+          "action": "click",
+          "status": "passed",
+          "summary": "click ok",
+          "error": null,
+          "screenshot": "C:\\Users\\20092\\Desktop\\prooject\\ai-projects\\dragon-runner-python\\python_agent\\artifacts\\screenshots\\wf_step_01_after.png",
+          "state_signature": "b09d17ebb9246c8b",
+          "note": "Open menu"
+        },
+        {
+          "index": 2,
+          "action": "click",
+          "status": "passed",
+          "summary": "click ok",
+          "error": null,
+          "screenshot": "C:\\Users\\20092\\Desktop\\prooject\\ai-projects\\dragon-runner-python\\python_agent\\artifacts\\screenshots\\wf_step_02_after.png",
+          "state_signature": "1c7cecc2b73a9991",
+          "note": "Tap logout (based on clickable hints)"
+        },
+        {
+          "index": 3,
+          "action": "wait",
+          "status": "passed",
+          "summary": "wait 1.0s",
+          "error": null,
+          "screenshot": "C:\\Users\\20092\\Desktop\\prooject\\ai-projects\\dragon-runner-python\\python_agent\\artifacts\\screenshots\\wf_step_03_before.png",
+          "state_signature": "1c7cecc2b73a9991",
+          "note": null
+        }
+      ],
+      "bugs": []
+    }
+  ],
+  "navigation_memory_file": "C:\\Users\\20092\\Desktop\\prooject\\ai-projects\\dragon-runner-python\\python_agent\\artifacts\\navigation_memory.json",
+  "finished_at": "2026-01-07T06:30:08.702419Z"
+}
