@@ -547,7 +547,7 @@
       ]
     },
     "8a634cce022dd883": {
-      "last_seen": "2026-01-07T12:32:32.057850Z",
+      "last_seen": "2026-03-01T12:36:14.607762Z",
       "first_seen": "2026-01-07T11:12:30.869728Z",
       "state_signature": "8a634cce022dd883",
       "path": [
@@ -794,7 +794,7 @@
       "path": []
     },
     "90742e8f07bd38bc": {
-      "last_seen": "2026-01-07T12:31:37.116194Z",
+      "last_seen": "2026-01-08T07:54:03.175864Z",
       "first_seen": "2026-01-07T12:31:37.116194Z",
       "state_signature": "90742e8f07bd38bc",
       "path": []
@@ -913,16 +913,10 @@
       ]
     },
     "3283f55f97d6758b": {
-      "last_seen": "2026-01-07T12:33:19.627827Z",
+      "last_seen": "2026-03-01T12:38:16.425506Z",
       "first_seen": "2026-01-07T12:32:28.694449Z",
       "state_signature": "3283f55f97d6758b",
-      "path": [
-        "scroll left",
-        "wait 1.0s",
-        "scroll right",
-        "wait 1.0s",
-        "visual_check"
-      ]
+      "path": []
     },
     "9515a664660bf1aa": {
       "last_seen": "2026-01-07T12:32:35.812616Z",
@@ -938,13 +932,12 @@
       ]
     },
     "1c268f73bdf7a027": {
-      "last_seen": "2026-01-07T12:32:48.345434Z",
+      "last_seen": "2026-03-01T12:38:06.092611Z",
       "first_seen": "2026-01-07T12:32:46.197804Z",
       "state_signature": "1c268f73bdf7a027",
       "path": [
         "click accessibility_id:open menu",
-        "wait 1.0s",
-        "visual_check"
+        "wait 1.0s"
       ]
     },
     "0f2179f0be55f792": {
@@ -976,18 +969,46 @@
       ]
     },
     "a67df834d2dce8c7": {
-      "last_seen": "2026-01-07T12:33:10.257429Z",
+      "last_seen": "2026-03-01T12:38:17.529747Z",
       "first_seen": "2026-01-07T12:33:03.678991Z",
       "state_signature": "a67df834d2dce8c7",
       "path": [
-        "click accessibility_id:store item",
-        "wait 2.0s",
-        "scroll up",
-        "wait 0.5s",
-        "click accessibility_id:gray circle",
-        "wait 0.5s",
-        "visual_check"
+        "click accessibility_id:store item"
       ]
+    },
+    "266bffc13aec6473": {
+      "last_seen": "2026-01-07T17:26:00.740808Z",
+      "first_seen": "2026-01-07T17:25:47.151275Z",
+      "state_signature": "266bffc13aec6473",
+      "path": []
+    },
+    "900994aadcb43105": {
+      "last_seen": "2026-03-01T12:35:44.162929Z",
+      "first_seen": "2026-01-07T18:11:18.351648Z",
+      "state_signature": "900994aadcb43105",
+      "path": []
+    },
+    "766dd9ea071fbcdc": {
+      "last_seen": "2026-03-01T12:38:07.689929Z",
+      "first_seen": "2026-01-08T07:54:39.808405Z",
+      "state_signature": "766dd9ea071fbcdc",
+      "path": [
+        "click accessibility_id:open menu",
+        "wait 1.0s",
+        "click accessibility_id:menu item log in"
+      ]
+    },
+    "9148f6094dc9522c": {
+      "last_seen": "2026-03-01T12:34:58.986754Z",
+      "first_seen": "2026-03-01T12:34:58.986754Z",
+      "state_signature": "9148f6094dc9522c",
+      "path": []
+    },
+    "45d20f8bcb6df93f": {
+      "last_seen": "2026-03-01T12:35:40.749624Z",
+      "first_seen": "2026-03-01T12:35:40.749624Z",
+      "state_signature": "45d20f8bcb6df93f",
+      "path": []
     }
   }
 }

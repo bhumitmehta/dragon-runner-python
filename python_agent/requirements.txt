@@ -2,6 +2,13 @@ Appium-Python-Client
 google-generativeai
 python-dotenv
 Pillow
+requests
 google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
+tinydb>=4.8.0
+# Bug Localization (Ladybug integration)
+torch>=2.0.0
+transformers>=4.30.0
+nltk>=3.8.0
+numpy>=1.24.0

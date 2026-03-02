@@ -11,15 +11,18 @@ load_dotenv(_env_file, override=True)  # override=True ensures new values are lo
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # App under test (Android)
-APP_PACKAGE = "com.saucelabs.mydemoapp.rn"
-APP_ACTIVITY = ".MainActivity"
-APK_PATH = (
+APP_PACKAGE = os.getenv("APP_PACKAGE", "com.saucelabs.mydemoapp.rn")
+APP_ACTIVITY = os.getenv("APP_ACTIVITY", ".MainActivity")
+
+_default_apk_path = (
     REPO_ROOT
     / "appium-wdio-react-native-ios-android"
     / "app"
     / "android"
     / "Android-MyDemoAppRN.1.3.0.build-244.apk"
 )
+_apk_path_env = os.getenv("APK_PATH")
+APK_PATH = Path(_apk_path_env).expanduser() if _apk_path_env else _default_apk_path
 
 # Device / emulator
 EMULATOR_AVD = os.getenv("ANDROID_AVD") or os.getenv("AVD_NAME") or "Pixel_2_API_30"
@@ -53,6 +56,12 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 VLM_MODEL_NAME = os.getenv("VLM_MODEL_NAME", "gemini-2.5-flash")
 VLM_ENABLED = os.getenv("VLM_ENABLED", "1").strip().lower() not in ("0", "false", "no")
 
+# Ollama (local LLM fallback)
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3:8b")
+# Auto-fallback: use Ollama when Gemini is unavailable (quota exceeded, no API key, etc.)
+OLLAMA_FALLBACK = os.getenv("OLLAMA_FALLBACK", "1").strip().lower() not in ("0", "false", "no")
+
 # Agent
 MAX_STEPS = int(os.getenv("MAX_STEPS", "30"))
 MAX_SAME_STATE = int(os.getenv("MAX_SAME_STATE", "3"))
@@ -64,4 +73,17 @@ LOGS_DIR = ARTIFACTS_DIR / "logs"
 REPORTS_DIR = ARTIFACTS_DIR / "reports"
 NAVIGATION_MEMORY_FILE = ARTIFACTS_DIR / "navigation_memory.json"
 APPIUM_LOG_FILE = LOGS_DIR / "appium.log"
+
+# Bug Localization
+BUG_LOCALIZATION_ENABLED = os.getenv("BUG_LOCALIZATION_ENABLED", "0").strip().lower() not in ("0", "false", "no")
+# Directory containing the source code of the app under test (for bug-to-source mapping)
+_source_dir_env = os.getenv("SOURCE_CODE_DIR")
+SOURCE_CODE_DIR: Path | None = Path(_source_dir_env).expanduser() if _source_dir_env else (REPO_ROOT / "demo-app")
+SOURCE_CODE_EXTENSIONS = [
+    ext.strip()
+    for ext in os.getenv("SOURCE_CODE_EXTENSIONS", ".js,.ts,.tsx,.jsx,.java,.kt,.py,.swift,.m").split(",")
+    if ext.strip()
+]
+BUG_LOCALIZATION_TOP_N = int(os.getenv("BUG_LOCALIZATION_TOP_N", "10"))
+TRACES_DIR = ARTIFACTS_DIR / "traces"
 

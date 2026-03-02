@@ -1,0 +1,17 @@
+__pycache__
+.venv
+node_modules
+.env
+npm-debug.log
+*.pem
+!mock-cert.pem
+coverage
+lib
+/.env.example
+cached_repos/
+backend/.env
+/myenv/
+backend/embeddings_records.txt
+/backend/repos
+backend/metrics
+/backend/reports/

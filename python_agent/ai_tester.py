@@ -22,6 +22,10 @@ from .ui_extract import (
     extract_clickable_texts,
 )
 from .vlm import VLMQuotaExceeded, VLMUnavailable, get_vlm_response, get_text_response
+from .bug_localization.integration import (
+    BugLocalizationIntegration,
+    create_bug_report_from_detection,
+)
 
 
 @dataclass
@@ -56,11 +60,21 @@ class AITester:
     - Find bugs through intelligent exploration
     """
 
-    def __init__(self):
+    def __init__(self, *, source_code_dir: Optional[str] = None, localize_bugs: Optional[bool] = None):
         self.controller = AppiumController()
         self.appium_process = None
         self.session: Optional[ExplorationSession] = None
         self.vlm_enabled = config.VLM_ENABLED
+
+        # Bug localization
+        self.localize_bugs = localize_bugs if localize_bugs is not None else config.BUG_LOCALIZATION_ENABLED
+        src_dir = source_code_dir or (str(config.SOURCE_CODE_DIR) if config.SOURCE_CODE_DIR else None)
+        self.bug_integration: Optional[BugLocalizationIntegration] = None
+        if self.localize_bugs and src_dir:
+            self.bug_integration = BugLocalizationIntegration(
+                source_code_dir=src_dir,
+                file_extensions=config.SOURCE_CODE_EXTENSIONS,
+            )
 
     def _start_session(self, mode: str, user_task: Optional[str] = None) -> ExplorationSession:
         """Initialize a new testing session."""
@@ -71,6 +85,9 @@ class AITester:
             mode=mode,
             user_task=user_task,
         )
+        # Start bug localization trace
+        if self.bug_integration:
+            self.bug_integration.start_trace()
         return self.session
 
     def _get_ui_context(self) -> Dict[str, Any]:
@@ -302,19 +319,43 @@ Generate 3-5 relevant test scenarios for this screen."""
                 "screenshot": ui_context.get("screenshot_path"),
                 "timestamp": datetime.utcnow().isoformat() + "Z",
             }
+            # Run bug localization if enabled
+            if self.bug_integration:
+                analysis = self.bug_integration.analyze_detected_bug(
+                    bug_report=bug_report,
+                    page_source=ui_context.get("page_source"),
+                    screenshot_path=ui_context.get("screenshot_path"),
+                )
+                bug["localization"] = analysis.get("localization", {})
+                top_files = analysis.get("localization", {}).get("top_files", [])
+                if top_files:
+                    print(f"  Bug localized to: {top_files[0]['path']} (score={top_files[0]['score']:.4f})")
             result.bug_found = bug
             if self.session:
                 self.session.bugs_found.append(bug)
 
         # Record action in session
+        action_record = {
+            "action": action,
+            "locator": locator_value,
+            "summary": result.description,
+            "success": result.success,
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+        }
         if self.session:
-            self.session.actions_taken.append({
-                "action": action,
-                "locator": locator_value,
-                "summary": result.description,
-                "success": result.success,
-                "timestamp": datetime.utcnow().isoformat() + "Z",
-            })
+            self.session.actions_taken.append(action_record)
+
+        # Track step in bug localization trace
+        if self.bug_integration:
+            self.bug_integration.add_trace_step(
+                action=action_record,
+                ui_state={
+                    "accessibility_ids": ui_context.get("accessibility_ids", []),
+                    "resource_ids": ui_context.get("resource_ids", []),
+                    "state_signature": ui_context.get("state_signature", ""),
+                },
+                screenshot_path=ui_context.get("screenshot_path"),
+            )
 
         return result
 
@@ -378,6 +419,10 @@ Generate 3-5 relevant test scenarios for this screen."""
         config.REPORTS_DIR.mkdir(parents=True, exist_ok=True)
         report_path = config.REPORTS_DIR / f"ai_session_{self.session.session_id}.json"
 
+        # End bug localization trace
+        if self.bug_integration:
+            self.bug_integration.end_trace()
+
         report = {
             "session_id": self.session.session_id,
             "started_at": self.session.started_at,
@@ -391,7 +436,22 @@ Generate 3-5 relevant test scenarios for this screen."""
             "bugs": self.session.bugs_found,
         }
 
+        # Include bug localization report if available
+        if self.bug_integration and self.bug_integration.localization_results:
+            report["bug_localization"] = {
+                "source_code_dir": self.bug_integration.source_code_dir,
+                "bugs_analyzed": len(self.bug_integration.localization_results),
+                "localizations": self.bug_integration.localization_results,
+            }
+
         report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+
+        # Save execution trace for later analysis
+        if self.bug_integration:
+            config.TRACES_DIR.mkdir(parents=True, exist_ok=True)
+            trace_path = config.TRACES_DIR / f"trace_{self.session.session_id}.json"
+            self.bug_integration.save_trace(str(trace_path))
+
         return report_path
 
     # ========================
@@ -448,7 +508,7 @@ Generate 3-5 relevant test scenarios for this screen."""
                 result = self._execute_action(action_plan, ui_context)
                 print(f"  Result: {'✓' if result.success else '✗'} {result.description}")
 
-                time.sleep(1.5)
+                time.sleep(1)
 
         finally:
             report_path = self._save_session_report()
@@ -511,7 +571,7 @@ Generate 3-5 relevant test scenarios for this screen."""
                 if result.bug_found:
                     print(f"  🐛 BUG FOUND: {result.bug_found.get('description', '')}")
 
-                time.sleep(1.5)
+                time.sleep(1)
 
         finally:
             report_path = self._save_session_report()
@@ -522,6 +582,8 @@ Generate 3-5 relevant test scenarios for this screen."""
         print(f"Actions taken: {len(self.session.actions_taken)}")
         print(f"Bugs found: {len(self.session.bugs_found)}")
         print(f"Unique screens: {len(set(self.session.screens_visited))}")
+        if self.bug_integration and self.bug_integration.localization_results:
+            print(f"Bugs localized: {len(self.bug_integration.localization_results)}")
         print(f"Report: {report_path}")
         print(f"{'='*60}\n")
 
@@ -584,7 +646,7 @@ Generate 3-5 relevant test scenarios for this screen."""
                                 pass
                             # Go back to explore more
                             self.controller.reset_app()
-                            time.sleep(2)
+                            time.sleep(1)
                             break
 
         finally:

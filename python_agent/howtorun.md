@@ -19,6 +19,14 @@ If you did NOT install globally, you can still run via `npx`:
 npx --yes appium --version
 ```
 
+If you want to use the pinned Appium dependency from the attached reference project:
+
+```powershell
+Push-Location .\appium-wdio-react-native-ios-android
+npx appium --version
+Pop-Location
+```
+
 ## Environment variables (PowerShell)
 
 These env vars are understood by the Python agent (it builds the Appium URL and chooses the AVD from them):
@@ -44,6 +52,7 @@ python -m python_agent.main
 
 Notes:
 - The agent will try to start the emulator and then start Appium using `appium` or `npx --yes appium`.
+- If the folder `appium-wdio-react-native-ios-android` exists and has `node_modules`, the agent will run `npx appium` from there (so it uses the same Appium version as the reference setup).
 - Logs go to `python_agent/artifacts/logs/appium.log`.
 
 

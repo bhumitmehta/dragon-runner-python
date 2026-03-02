@@ -18,6 +18,10 @@ from .ui_extract import (
     extract_clickable_texts,
 )
 from .workflow_spec import WorkflowFile, WorkflowStep, substitute_vars
+from .bug_localization.integration import (
+    BugLocalizationIntegration,
+    create_bug_report_from_detection,
+)
 
 
 def _utc_run_id() -> str:
@@ -41,13 +45,23 @@ class StepResult:
 
 
 class WorkflowRunner:
-    def __init__(self, *, use_vision: bool = False):
+    def __init__(self, *, use_vision: bool = False, source_code_dir: str | None = None, localize_bugs: bool | None = None):
         self.controller = AppiumController()
         self.appium_process = None
         self.use_vision = use_vision and config.VLM_ENABLED
         self.vision_enabled_session = self.use_vision
 
         self.nav_memory = NavigationMemory.load(config.NAVIGATION_MEMORY_FILE)
+
+        # Bug localization
+        self.localize_bugs = localize_bugs if localize_bugs is not None else config.BUG_LOCALIZATION_ENABLED
+        src_dir = source_code_dir or (str(config.SOURCE_CODE_DIR) if config.SOURCE_CODE_DIR else None)
+        self.bug_integration: BugLocalizationIntegration | None = None
+        if self.localize_bugs and src_dir:
+            self.bug_integration = BugLocalizationIntegration(
+                source_code_dir=src_dir,
+                file_extensions=config.SOURCE_CODE_EXTENSIONS,
+            )
 
     def run_file(self, workflow_path: str | Path, *, out_path: Optional[str | Path] = None) -> Path:
         wf = WorkflowFile.load(workflow_path)
@@ -63,6 +77,7 @@ class WorkflowRunner:
             "started_at": _now_iso(),
             "workflow_file": str(Path(workflow_path).resolve()),
             "use_vision": bool(self.use_vision),
+            "bug_localization_enabled": bool(self.bug_integration),
             "device": config.ADB_TARGET_DEVICE,
             "appium_server_url": config.APPIUM_SERVER_URL,
             "app": {
@@ -97,6 +112,10 @@ class WorkflowRunner:
             out_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
             return out_path
 
+        # Start bug localization trace
+        if self.bug_integration:
+            self.bug_integration.start_trace()
+
         try:
             for workflow in wf.workflows:
                 wf_entry: Dict[str, Any] = {
@@ -110,7 +129,7 @@ class WorkflowRunner:
                 if workflow.name != "Reset App State":
                     try:
                         self.controller.reset_app()
-                        time.sleep(2)  # Wait for app to restart
+                        time.sleep(1)  # Wait for app to restart
                         actions_path.clear()
                     except Exception as reset_err:
                         print(f"Warning: Could not reset app before workflow '{workflow.name}': {reset_err}")
@@ -119,7 +138,41 @@ class WorkflowRunner:
                 for idx, step in enumerate(workflow.steps, start=1):
                     step_result, bug = self._run_step(idx, step, wf.data, actions_path)
                     wf_entry["steps"].append(step_result.__dict__)
+
+                    # Track step in bug localization trace
+                    if self.bug_integration:
+                        self.bug_integration.add_trace_step(
+                            action={
+                                "action": step.action,
+                                "locator": step.locator_value or step.element_id,
+                                "status": step_result.status,
+                            },
+                            ui_state={
+                                "state_signature": step_result.state_signature or "",
+                            },
+                            screenshot_path=step_result.screenshot,
+                        )
+
                     if bug is not None:
+                        # Localize the bug if integration is active
+                        if self.bug_integration:
+                            bug_text = create_bug_report_from_detection(
+                                bug.get("description", bug.get("title", "Unknown bug")),
+                                action_history=[
+                                    {"action": s.action, "element_id": s.locator_value or s.element_id}
+                                    for s in workflow.steps[:idx]
+                                ],
+                            )
+                            analysis = self.bug_integration.analyze_detected_bug(
+                                bug_report=bug_text,
+                                page_source=self.controller.get_page_source() or "",
+                                screenshot_path=step_result.screenshot,
+                            )
+                            bug["localization"] = analysis.get("localization", {})
+                            top_files = analysis.get("localization", {}).get("top_files", [])
+                            if top_files:
+                                print(f"  Bug localized to: {top_files[0]['path']} (score={top_files[0]['score']:.4f})")
+
                         wf_entry["bugs"].append(bug)
                         wf_entry["status"] = "failed"
                     if step_result.status == "failed":
@@ -131,6 +184,10 @@ class WorkflowRunner:
                 print(f"Workflow '{workflow.name}': {wf_entry['status'].upper()}")
 
         finally:
+            # End bug localization trace and save artifacts
+            if self.bug_integration:
+                self.bug_integration.end_trace()
+
             # Always try to persist navigation memory and shut down cleanly.
             try:
                 self.nav_memory.save()
@@ -146,8 +203,24 @@ class WorkflowRunner:
                     pass
 
         report["finished_at"] = _now_iso()
+
+        # Include bug localization results in report
+        if self.bug_integration and self.bug_integration.localization_results:
+            report["bug_localization"] = {
+                "source_code_dir": self.bug_integration.source_code_dir,
+                "bugs_analyzed": len(self.bug_integration.localization_results),
+                "localizations": self.bug_integration.localization_results,
+            }
+
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+
+        # Save execution trace separately
+        if self.bug_integration:
+            config.TRACES_DIR.mkdir(parents=True, exist_ok=True)
+            trace_path = config.TRACES_DIR / f"workflow_trace_{run_id}.json"
+            self.bug_integration.save_trace(str(trace_path))
+
         return out_path
 
     def _run_step(

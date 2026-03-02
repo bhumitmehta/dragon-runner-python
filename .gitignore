@@ -1,4 +1,5 @@
 /artifacts
+python_agent/artifacts/
 python_agent/__pycache__/
 
 # Byte-compiled / optimized / DLL files
@@ -11,3 +12,8 @@ __pycache__/
 .Python
 
 build/
+
+/node_modules/
+/demo-app/node_modules/
+**/python_agent/node_modules/
+**/**/DemoAppGenerated/node_modules/@typescript-eslint/eslint-plugin/

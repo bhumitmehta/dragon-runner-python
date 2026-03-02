@@ -16,14 +16,28 @@ from . import adb, appium_server, config
 from .appium_controller import AppiumController
 from .memory import Memory, state_signature_from_xml
 from .vlm import VLMQuotaExceeded, VLMUnavailable, get_vlm_response
+from .bug_localization.integration import (
+    BugLocalizationIntegration,
+    create_bug_report_from_detection,
+)
 
 class Agent:
-    def __init__(self):
+    def __init__(self, *, source_code_dir: Optional[str] = None, localize_bugs: Optional[bool] = None):
         self.appium_controller = AppiumController()
         self.memory = Memory()
         self.steps_taken = 0
         self.appium_process = None
         self.vlm_enabled = config.VLM_ENABLED
+
+        # Bug localization
+        self.localize_bugs = localize_bugs if localize_bugs is not None else config.BUG_LOCALIZATION_ENABLED
+        src_dir = source_code_dir or (str(config.SOURCE_CODE_DIR) if config.SOURCE_CODE_DIR else None)
+        self.bug_integration: Optional[BugLocalizationIntegration] = None
+        if self.localize_bugs and src_dir:
+            self.bug_integration = BugLocalizationIntegration(
+                source_code_dir=src_dir,
+                file_extensions=config.SOURCE_CODE_EXTENSIONS,
+            )
 
     def run(self):
         """Main loop for the agent."""
@@ -46,6 +60,10 @@ class Agent:
         if not self.appium_controller.app_is_open:
             print("Failed to start the app. Exiting.")
             return
+
+        # Start bug localization trace
+        if self.bug_integration:
+            self.bug_integration.start_trace()
 
         while self.steps_taken < config.MAX_STEPS:
             print(f"\n--- Step {self.steps_taken + 1} ---")
@@ -87,6 +105,17 @@ class Agent:
             if action:
                 self.execute_action(action)
                 self.memory.add_to_short_term(action, action.get("action_summary"))
+                # Track step in bug localization trace
+                if self.bug_integration:
+                    self.bug_integration.add_trace_step(
+                        action=action,
+                        ui_state={
+                            "accessibility_ids": accessibility_ids,
+                            "resource_ids": resource_ids,
+                            "state_signature": state_sig,
+                        },
+                        screenshot_path=screenshot_path,
+                    )
             else:
                 print("No action planned.")
 
@@ -94,7 +123,18 @@ class Agent:
             self.detect_bugs(screenshot_path, page_source)
 
             self.steps_taken += 1
-            time.sleep(2) # Wait a bit between steps
+            time.sleep(1) # Wait a bit between steps
+
+        # End trace and save localization report
+        if self.bug_integration:
+            self.bug_integration.end_trace()
+            config.REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+            loc_report_path = config.REPORTS_DIR / "agent_localization_report.json"
+            self.bug_integration.generate_report(str(loc_report_path))
+
+            config.TRACES_DIR.mkdir(parents=True, exist_ok=True)
+            trace_path = config.TRACES_DIR / "agent_trace.json"
+            self.bug_integration.save_trace(str(trace_path))
 
         self.appium_controller.stop_driver()
         appium_server.stop_appium_server(self.appium_process)
@@ -277,8 +317,23 @@ class Agent:
         """Uses VLM to detect visual bugs on the screen."""
         # Quick functional heuristics
         if "has stopped" in (page_source or "").lower() or "keeps stopping" in (page_source or "").lower():
-            self.memory.add_to_long_term("App crash dialog detected (text indicates 'has stopped').")
+            bug_desc = "App crash dialog detected (text indicates 'has stopped')."
+            self.memory.add_to_long_term(bug_desc)
             print("Potential Crash Detected (page source).")
+            # Localize crash bug
+            if self.bug_integration:
+                report_text = create_bug_report_from_detection(
+                    bug_desc,
+                    action_history=[m.get("action", {}) for m in self.memory.short_term_memory[-5:]],
+                )
+                analysis = self.bug_integration.analyze_detected_bug(
+                    bug_report=report_text,
+                    page_source=page_source,
+                    screenshot_path=screenshot_path,
+                )
+                top_files = analysis.get("localization", {}).get("top_files", [])
+                if top_files:
+                    print(f"  Bug localized to: {top_files[0]['path']} (score={top_files[0]['score']:.4f})")
             return
 
         if not self.vlm_enabled:
@@ -295,6 +350,20 @@ class Agent:
              if bug_description and "no bugs found" not in bug_description.lower():
                 print(f"Potential Bug Found: {bug_description}")
                 self.memory.add_to_long_term(bug_description)
+                # Localize visual bug
+                if self.bug_integration:
+                    report_text = create_bug_report_from_detection(
+                        bug_description,
+                        action_history=[m.get("action", {}) for m in self.memory.short_term_memory[-5:]],
+                    )
+                    analysis = self.bug_integration.analyze_detected_bug(
+                        bug_report=report_text,
+                        page_source=page_source,
+                        screenshot_path=screenshot_path,
+                    )
+                    top_files = analysis.get("localization", {}).get("top_files", [])
+                    if top_files:
+                        print(f"  Bug localized to: {top_files[0]['path']} (score={top_files[0]['score']:.4f})")
         except (VLMQuotaExceeded, VLMUnavailable):
             print("VLM is not available for bug detection.")
             self.vlm_enabled = False

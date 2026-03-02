@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 from typing import Optional
 import shutil
+from urllib.parse import urlparse
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
@@ -40,6 +41,35 @@ def _resolve_appium_cmd() -> list[str]:
     return ["npx", "--yes", "appium"]
 
 
+def _pick_working_dir_for_cmd(cmd: list[str], repo_root: Path) -> Path:
+    """Prefer running `npx appium` from the attached WDIO folder so it uses its pinned dependency."""
+
+    if not cmd:
+        return repo_root
+
+    exe = Path(cmd[0]).name.lower()
+    is_npx = exe in {"npx", "npx.cmd", "npx.exe"}
+    if not is_npx:
+        return repo_root
+
+    wdio_root = repo_root / "appium-wdio-react-native-ios-android"
+    if (wdio_root / "package.json").exists() and (wdio_root / "node_modules").exists():
+        return wdio_root
+
+    return repo_root
+
+
+def _server_args_from_url(server_url: str) -> list[str]:
+    parsed = urlparse(server_url)
+    host = parsed.hostname or "127.0.0.1"
+    port = parsed.port or 4723
+    base_path = parsed.path.rstrip("/")
+    args: list[str] = ["--address", host, "-p", str(port), "--log-level", "info"]
+    if base_path == "/wd/hub":
+        args += ["--base-path", "/wd/hub"]
+    return args
+
+
 def start_appium_server(server_url: str, repo_root: Path, log_file: Optional[Path] = None) -> Optional[subprocess.Popen]:
     """Start Appium if needed; return the spawned process or None if already running."""
 
@@ -48,9 +78,7 @@ def start_appium_server(server_url: str, repo_root: Path, log_file: Optional[Pat
         return None
 
     cmd = _resolve_appium_cmd()
-    extra_args: list[str] = []
-    if "/wd/hub" in server_url:
-        extra_args += ["--base-path", "/wd/hub"]
+    extra_args = _server_args_from_url(server_url)
 
     stdout = subprocess.DEVNULL
     stderr = subprocess.DEVNULL
@@ -65,15 +93,22 @@ def start_appium_server(server_url: str, repo_root: Path, log_file: Optional[Pat
     if hasattr(subprocess, "CREATE_NEW_PROCESS_GROUP"):
         creationflags = subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore[attr-defined]
 
+    working_dir = _pick_working_dir_for_cmd(cmd, repo_root)
     print(f"Starting Appium server: {' '.join(cmd + extra_args)}")
-    proc = subprocess.Popen(cmd + extra_args, cwd=str(repo_root), stdout=stdout, stderr=stderr, creationflags=creationflags)
+    proc = subprocess.Popen(
+        cmd + extra_args,
+        cwd=str(working_dir),
+        stdout=stdout,
+        stderr=stderr,
+        creationflags=creationflags,
+    )
 
     deadline = time.time() + 45.0
     while time.time() < deadline:
         if is_appium_responding(server_url):
             print("Appium server is responding.")
             return proc
-        time.sleep(1.5)
+        time.sleep(1)
 
     stop_appium_server(proc)
     if file_handle:
