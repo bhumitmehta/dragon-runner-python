@@ -240,6 +240,7 @@ class SessionMemory:
             "tested_features": self.tested_features,
             "bugs": [asdict(b) for b in self.bugs],
             "action_log": self.action_log[-500:],   # keep last 500 to limit size
+            "action_weights": {k: asdict(v) for k, v in self.action_weights.items()},
             "cursor": {
                 "goal_id": self.current_goal_id,
                 "task_id": self.current_task_id,
@@ -267,6 +268,10 @@ class SessionMemory:
         mem.user_task = blob.get("user_task")
         mem.action_log = blob.get("action_log", [])
         mem.tested_features = blob.get("tested_features", {})
+
+        # Restore action weights
+        for eid, wdata in blob.get("action_weights", {}).items():
+            mem.action_weights[eid] = ActionWeight(**wdata)
 
         # Restore plan
         plan_data = blob.get("plan", {})
@@ -464,6 +469,61 @@ class SessionMemory:
             results.append((action_desc, target_visits))
         results.sort(key=lambda x: x[1])
         return [desc for desc, _ in results[:5]]
+
+    # ── Action priority weights (Critic → Explorer) ────────────────
+
+    _VERDICT_REWARDS = {"pass": +1.0, "warn": -0.3, "fail": -1.5}
+
+    def update_action_weight(self, element_id: str, verdict: str):
+        """Apply a Critic verdict as a reward signal on an element.
+
+        Called by the Orchestrator after every Critic evaluation. The
+        cumulative weight biases Explorer element selection.
+        """
+        if not element_id:
+            return
+        now = datetime.utcnow().isoformat() + "Z"
+        reward = self._VERDICT_REWARDS.get(verdict, 0.0)
+
+        w = self.action_weights.get(element_id)
+        if w is None:
+            w = ActionWeight(element_id=element_id)
+            self.action_weights[element_id] = w
+
+        w.weight += reward
+        w.last_verdict = verdict
+        w.last_updated = now
+        if verdict == "pass":
+            w.pass_count += 1
+        elif verdict == "fail":
+            w.fail_count += 1
+        self._persist()
+
+    def get_element_weight(self, element_id: str) -> float:
+        """Return the cumulative Critic-derived weight for an element."""
+        w = self.action_weights.get(element_id)
+        return w.weight if w else 0.0
+
+    def get_top_weighted_elements(self, n: int = 10) -> List[Dict[str, Any]]:
+        """Return the N highest-weighted elements (Critic-rewarded)."""
+        items = sorted(self.action_weights.values(),
+                       key=lambda w: w.weight, reverse=True)
+        return [
+            {"element_id": w.element_id, "weight": w.weight,
+             "pass": w.pass_count, "fail": w.fail_count}
+            for w in items[:n]
+        ]
+
+    def get_penalised_elements(self, threshold: float = -1.0) -> set:
+        """Return element IDs whose cumulative weight is below threshold.
+
+        Explorer should deprioritise these -- Critic has repeatedly
+        marked actions on them as failures or hallucinations.
+        """
+        return {
+            eid for eid, w in self.action_weights.items()
+            if w.weight <= threshold
+        }
 
     # ── Bugs ─────────────────────────────────────────────────────────
 

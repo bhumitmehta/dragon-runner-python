@@ -39,6 +39,31 @@ class CriticAgent(BaseAgent):
         "Always return a structured JSON verdict."
     )
 
+    # ── Evaluate with memory feedback ────────────────────────────────
+
+    def evaluate_and_update(
+        self,
+        action_plan: Dict[str, Any],
+        result: Dict[str, Any],
+        ui_before: Dict[str, List[str]],
+        ui_after: Dict[str, List[str]],
+        memory: Any,
+    ) -> Dict[str, Any]:
+        """Evaluate a step AND push the verdict into SessionMemory's action
+        weights so the Explorer can learn from Critic feedback.
+
+        This is the preferred entry point -- replaces bare
+        ``validate_result`` calls in the Orchestrator.
+        """
+        verdict = self.validate_result(action_plan, result, ui_before, ui_after)
+
+        # Feed the verdict back as a reward signal
+        element_id = action_plan.get("locator_value", "") or ""
+        if element_id and hasattr(memory, "update_action_weight"):
+            memory.update_action_weight(element_id, verdict.get("verdict", ""))
+
+        return verdict
+
     # ── Validate a proposed action ───────────────────────────────────
 
     def validate_action(

@@ -173,8 +173,14 @@ class ExplorerAgent(BaseAgent):
         if plan_action:
             return plan_action
 
-        # 4) Click untried elements
+        # 4) Click untried elements (deprioritise Critic-penalised ones)
         untried = all_ids - self._tried_elements
+        penalised = memory.get_penalised_elements(threshold=-1.0)
+        if penalised:
+            preferred = untried - penalised
+            if preferred:
+                untried = preferred  # try non-penalised first
+                logger.debug("Deprioritised %d Critic-penalised elements", len(penalised & (all_ids - self._tried_elements)))
 
         if self._screen_visit_count.get(sig, 0) > 4 and not untried:
             # If we keep returning to the same screen, use memory graph
@@ -398,6 +404,18 @@ If no visual bugs found, return: []"""
         if known_nav:
             transition_hint = f"\nKNOWN TRANSITIONS from this screen that lead to LESS-VISITED screens:\n{json.dumps(known_nav[:5])}\nPrefer clicking elements from this list!\n"
 
+        # Get Critic feedback weights (top rewarded + penalised)
+        weight_hint = ""
+        top_weighted = memory.get_top_weighted_elements(5)
+        penalised_ids = memory.get_penalised_elements(threshold=-1.0)
+        if top_weighted or penalised_ids:
+            weight_hint = "\nCRITIC FEEDBACK (from previous step evaluations):"
+            if top_weighted:
+                weight_hint += f"\nHighly-rated elements: {json.dumps([w['element_id'] for w in top_weighted[:5]])}"
+            if penalised_ids:
+                weight_hint += f"\nPenalised elements (AVOID): {json.dumps(list(penalised_ids)[:5])}"
+            weight_hint += "\n"
+
         prompt = f"""You are exploring a mobile app to find bugs and maximise test coverage.
 
 UNTRIED ELEMENTS (never interacted with before):
@@ -412,7 +430,7 @@ COVERAGE SO FAR:
 
 CURRENT SCREEN has been visited {current_visits} times.
 LEAST-VISITED SCREENS: {least_visited_str}
-{transition_hint}
+{transition_hint}{weight_hint}
 RECENT ACTIONS:
 {history_str}
 
@@ -667,8 +685,11 @@ Return ONLY JSON:
                 other_elements.append(eid)
 
         # Build prioritised plan: nav first, then actions, then others
-        # Within each group, prefer elements that lead to less-visited screens
-        plan = nav_elements + action_elements + other_elements
+        # Within each group, sort by Critic weight (higher = more promising)
+        def _weight_sort(items):
+            return sorted(items, key=lambda eid: memory.get_element_weight(eid), reverse=True)
+
+        plan = _weight_sort(nav_elements) + _weight_sort(action_elements) + _weight_sort(other_elements)
         self._screen_plans[sig] = plan
         self._screen_plan_index[sig] = 0
 
