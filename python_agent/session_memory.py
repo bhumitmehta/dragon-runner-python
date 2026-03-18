@@ -61,26 +61,93 @@ class TestStep:
 
 @dataclass
 class TestTask:
-    """Mid-level task grouping several steps (e.g. 'Login with valid creds')."""
+
+    """Mid-level task grouping several steps (e.g. 'Login with valid creds').
+
+    Tasks can contain **subtasks** for recursive decomposition:
+    Task -> SubTask -> SubSubTask -> ... -> Steps (atomic UI actions).
+
+    The ``subtasks`` list is optional.  When present, the task is
+    considered a *container* -- its own ``steps`` describe actions that
+    happen *before* descending into subtasks (e.g. navigation to the
+    right screen).  Completion requires both own steps AND all subtasks
+    to be done.
+    """
+
+
+
     id: str
     name: str
     description: str
     priority: str = "medium"   # high / medium / low
     status: str = TaskStatus.NOT_STARTED.value
     steps: List[TestStep] = field(default_factory=list)
+    subtasks: List["TestTask"] = field(default_factory=list)
     bugs_found: List[str] = field(default_factory=list)   # bug IDs
     depends_on: List[str] = field(default_factory=list)    # task IDs
+    complexity: int = 0          # 0=not estimated, 1=simple, 2=medium, 3=complex
+    decomposed: bool = False     # True once Planner has recursively expanded this
+    doc_context: str = ""        # documentation excerpt that originated this task
     created_at: str = ""
     finished_at: Optional[str] = None
 
+    # ── Recursive helpers ────────────────────────────────────────────
+
+    def all_leaf_steps(self) -> List[TestStep]:
+        """Collect every atomic step in this task tree (depth-first)."""
+        leaves = list(self.steps)
+        for st in self.subtasks:
+            leaves.extend(st.all_leaf_steps())
+        return leaves
+
     def progress(self) -> float:
-        if not self.steps:
+        all_steps = self.all_leaf_steps()
+        if not all_steps:
+            # Container with only subtasks: average subtask progress
+            if self.subtasks:
+                return sum(st.progress() for st in self.subtasks) / len(self.subtasks)
             return 0.0
-        done = sum(1 for s in self.steps if s.status in (TaskStatus.COMPLETED.value, TaskStatus.SKIPPED.value))
-        return done / len(self.steps)
+        done = sum(1 for s in all_steps if s.status in (TaskStatus.COMPLETED.value, TaskStatus.SKIPPED.value))
+        return done / len(all_steps)
 
     def is_done(self) -> bool:
-        return self.status in (TaskStatus.COMPLETED.value, TaskStatus.FAILED.value, TaskStatus.SKIPPED.value)
+        if self.status in (TaskStatus.COMPLETED.value, TaskStatus.FAILED.value, TaskStatus.SKIPPED.value):
+            return True
+        # Also check recursively -- if all children done, we're done
+        if self.subtasks and all(st.is_done() for st in self.subtasks):
+            own_done = all(
+                s.status in (TaskStatus.COMPLETED.value, TaskStatus.SKIPPED.value)
+                for s in self.steps
+            ) if self.steps else True
+            if own_done:
+                # Propagate status so it persists to disk and is visible
+                self.status = TaskStatus.COMPLETED.value
+                self.finished_at = datetime.utcnow().isoformat() + "Z"
+            return own_done
+        # Leaf task with no subtasks: check own steps
+        if not self.subtasks and self.steps:
+            all_own_done = all(
+                s.status in (TaskStatus.COMPLETED.value, TaskStatus.SKIPPED.value)
+                for s in self.steps
+            )
+            if all_own_done:
+                self.status = TaskStatus.COMPLETED.value
+                self.finished_at = datetime.utcnow().isoformat() + "Z"
+            return all_own_done
+        return False
+
+    def depth(self) -> int:
+        """Max nesting depth of the subtask tree."""
+        if not self.subtasks:
+            return 0
+        return 1 + max(st.depth() for st in self.subtasks)
+
+    def flat_subtask_list(self) -> List["TestTask"]:
+        """Return all tasks in the tree (self + descendants), depth-first."""
+        result = [self]
+        for st in self.subtasks:
+            result.extend(st.flat_subtask_list())
+        return result
 
 
 @dataclass
@@ -116,19 +183,31 @@ class TestPlan:
         return sum(g.progress() for g in self.goals) / len(self.goals)
 
     def summary(self) -> Dict[str, Any]:
-        total_tasks = sum(len(g.tasks) for g in self.goals)
-        done_tasks = sum(1 for g in self.goals for t in g.tasks if t.is_done())
-        total_steps = sum(len(t.steps) for g in self.goals for t in g.tasks)
+        # Count all tasks recursively (top-level + nested subtasks)
+        all_tasks = []
+        for g in self.goals:
+            for t in g.tasks:
+                all_tasks.extend(t.flat_subtask_list())
+        total_tasks = len(all_tasks)
+        done_tasks = sum(1 for t in all_tasks if t.is_done())
+        # Count all leaf steps recursively
+        all_steps = []
+        for g in self.goals:
+            for t in g.tasks:
+                all_steps.extend(t.all_leaf_steps())
+        total_steps = len(all_steps)
         done_steps = sum(
-            1 for g in self.goals for t in g.tasks for s in t.steps
+            1 for s in all_steps
             if s.status in (TaskStatus.COMPLETED.value, TaskStatus.SKIPPED.value)
         )
+        max_depth = max((t.depth() for g in self.goals for t in g.tasks), default=0)
         return {
             "goals": len(self.goals),
             "tasks": total_tasks,
             "tasks_done": done_tasks,
             "steps": total_steps,
             "steps_done": done_steps,
+            "max_depth": max_depth,
             "progress_pct": round(self.overall_progress() * 100, 1),
         }
 
@@ -302,9 +381,7 @@ class SessionMemory:
         for gd in data.get("goals", []):
             tasks = []
             for td in gd.get("tasks", []):
-                steps = [TestStep(**sd) for sd in td.get("steps", [])]
-                td_copy = {k: v for k, v in td.items() if k != "steps"}
-                tasks.append(TestTask(**td_copy, steps=steps))
+                tasks.append(SessionMemory._rebuild_task(td))
             gd_copy = {k: v for k, v in gd.items() if k != "tasks"}
             goals.append(TestGoal(**gd_copy, tasks=tasks))
         return TestPlan(
@@ -313,6 +390,27 @@ class SessionMemory:
             version=data.get("version", 1),
         )
 
+    @staticmethod
+    def _rebuild_task(td: Dict) -> TestTask:
+        """Recursively rebuild a TestTask from its serialised dict.
+
+        Filters out unexpected keys so that schema changes or
+        LLM-generated extras don't crash the constructor.
+        """
+        _STEP_FIELDS = {f.name for f in TestStep.__dataclass_fields__.values()}
+        _TASK_FIELDS = {f.name for f in TestTask.__dataclass_fields__.values()}
+
+        steps = [
+            TestStep(**{k: v for k, v in sd.items() if k in _STEP_FIELDS})
+            for sd in td.get("steps", [])
+        ]
+        subtasks = [SessionMemory._rebuild_task(st) for st in td.get("subtasks", [])]
+        td_copy = {
+            k: v for k, v in td.items()
+            if k not in ("steps", "subtasks") and k in _TASK_FIELDS
+        }
+        return TestTask(**td_copy, steps=steps, subtasks=subtasks)
+
     # ── Plan helpers ─────────────────────────────────────────────────
 
     def set_plan(self, plan: TestPlan):
@@ -320,20 +418,52 @@ class SessionMemory:
         self._persist()
 
     def get_next_task(self) -> Optional[TestTask]:
-        """Return the next task that is not done, respecting priority."""
+        """Return the next leaf-level task that is not done.
+
+        Walks the tree depth-first: if a task has subtasks, descend into
+        the first not-done subtask rather than returning the container.
+        This means the executor always gets an actionable leaf task whose
+        ``steps`` can be run directly.
+        """
         for goal in self.plan.goals:
             if goal.is_done():
                 continue
             for task in sorted(goal.tasks, key=lambda t: {"high": 0, "medium": 1, "low": 2}.get(t.priority, 1)):
-                if not task.is_done():
-                    # Check deps
-                    all_deps_done = all(
-                        self._find_task(dep_id) is not None and self._find_task(dep_id).is_done()
-                        for dep_id in task.depends_on
-                    )
-                    if all_deps_done:
-                        return task
+                if task.is_done():
+                    continue
+                # Check deps
+                all_deps_done = all(
+                    self._find_task(dep_id) is not None and self._find_task(dep_id).is_done()
+                    for dep_id in task.depends_on
+                )
+                if not all_deps_done:
+                    continue
+                # Descend into subtasks depth-first
+                leaf = self._find_next_leaf(task)
+                if leaf is not None:
+                    return leaf
         return None
+
+    def _find_next_leaf(self, task: TestTask) -> Optional[TestTask]:
+        """Depth-first search for the next actionable leaf task."""
+        if task.is_done():
+            return None
+        # If this task has subtasks, first execute own steps then descend
+        if task.subtasks:
+            # Own pre-steps not done yet?  Return this task so they run first.
+            own_steps_pending = any(
+                s.status == TaskStatus.NOT_STARTED.value for s in task.steps
+            )
+            if own_steps_pending:
+                return task
+            # Then descend into first not-done subtask
+            for st in sorted(task.subtasks, key=lambda t: {"high": 0, "medium": 1, "low": 2}.get(t.priority, 1)):
+                leaf = self._find_next_leaf(st)
+                if leaf is not None:
+                    return leaf
+            return None
+        # Leaf task (no subtasks) -- return if not done
+        return task if not task.is_done() else None
 
     def get_next_step(self, task: TestTask) -> Optional[TestStep]:
         for step in task.steps:
@@ -342,10 +472,22 @@ class SessionMemory:
         return None
 
     def _find_task(self, task_id: str) -> Optional[TestTask]:
+        """Recursively search for a task by ID in the full plan tree."""
         for g in self.plan.goals:
             for t in g.tasks:
-                if t.id == task_id:
-                    return t
+                found = self._find_task_recursive(t, task_id)
+                if found is not None:
+                    return found
+        return None
+
+    @staticmethod
+    def _find_task_recursive(task: TestTask, task_id: str) -> Optional[TestTask]:
+        if task.id == task_id:
+            return task
+        for st in task.subtasks:
+            found = SessionMemory._find_task_recursive(st, task_id)
+            if found is not None:
+                return found
         return None
 
     def mark_step(self, step: TestStep, status: TaskStatus, **extra):

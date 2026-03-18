@@ -1,24 +1,101 @@
 """
 GUI Data Extractor for Bug Localization
 
-Extracts Screen Component (SC) terms and GUI Screen (GS) terms from 
+Extracts Screen Component (SC) terms and GUI Screen (GS) terms from
 execution traces to improve bug localization accuracy.
 
-This is particularly useful for mobile app testing where UI interactions
-can provide hints about which source files are likely to contain bugs.
+Supports **two** trace formats:
+
+1. **Ladybug format** — ``Execution-1.json`` with
+   ``steps[].screen.dynGuiComponents[].idXml`` and
+   ``steps[].screen.activity``  (Android GUI-instrumentation tools).
+
+2. **Appium / AI-Agent format** — our agent records each step with
+   ``page_source`` (raw XML from UiAutomator2) plus metadata such as
+   ``accessibility_ids``, ``resource_ids``, ``screen_name``, and
+   ``activity``.
+
+The adapter code converts Appium page-source XML into the same SC/GS
+term lists that Ladybug's embedding pipeline expects.
 """
 
 import json
 import re
+import xml.etree.ElementTree as ET
 from typing import Optional
+
+
+# ────────────────────────────────────────────────────────────────────
+#  Appium XML → SC / GS terms
+# ────────────────────────────────────────────────────────────────────
+
+def _extract_sc_terms_from_appium_xml(page_source: str) -> set[str]:
+    """Parse Appium page-source XML and return resource-ids & content-desc values."""
+    terms: set[str] = set()
+    if not page_source:
+        return terms
+    try:
+        root = ET.fromstring(page_source)
+    except ET.ParseError:
+        return terms
+
+    for node in root.iter():
+        # resource-id  (e.g. "com.saucelabs.mydemoapp.rn:id/loginBtn")
+        rid = node.attrib.get("resource-id", "")
+        if rid:
+            short = rid.rsplit("/", 1)[-1]  # keep only the id name
+            if short and short not in ("", "NO_ID"):
+                terms.add(short)
+        # content-desc (accessibility label)
+        cdesc = node.attrib.get("content-desc", "")
+        if cdesc and len(cdesc) > 1:
+            terms.add(cdesc)
+        # text attribute (only meaningful short labels)
+        txt = node.attrib.get("text", "")
+        if txt and 2 < len(txt) < 40:
+            terms.add(txt)
+    return terms
+
+
+def _extract_gs_terms_from_appium_xml(page_source: str) -> set[str]:
+    """Extract Activity / package identifiers from Appium XML root attributes."""
+    terms: set[str] = set()
+    if not page_source:
+        return terms
+    try:
+        root = ET.fromstring(page_source)
+    except ET.ParseError:
+        return terms
+
+    # UiAutomator2 puts package on the root node
+    pkg = root.attrib.get("package", "")
+    if pkg:
+        terms.add(pkg.rsplit(".", 1)[-1])  # e.g. "rn"
+
+    # Some drivers add activity in the hierarchy
+    for node in root.iter():
+        activity = node.attrib.get("activity", "")
+        if activity:
+            # Strip java-style package prefix
+            short = activity.rsplit(".", 1)[-1]
+            if short:
+                terms.add(short)
+    return terms
+
+
+# ────────────────────────────────────────────────────────────────────
+#  Unified SC / GS extraction – handles BOTH formats
+# ────────────────────────────────────────────────────────────────────
 
 
 def extract_sc_terms(trace_data: Optional[str | dict]) -> list[str]:
     """
     Extract Screen Component terms from an execution trace.
     
-    SC terms are the XML IDs of UI components that were interacted with.
-    The last 4 steps of the trace are analyzed (focusing on buggy state).
+    SC terms are the XML IDs / accessibility labels of UI components that
+    were interacted with.  Supports:
+    - Ladybug format (``steps[].screen.dynGuiComponents[].idXml``)
+    - Appium/agent format (``steps[].page_source`` XML or explicit lists)
     
     Args:
         trace_data: JSON string or dict containing the execution trace
@@ -34,8 +111,8 @@ def extract_sc_terms(trace_data: Optional[str | dict]) -> list[str]:
         try:
             data = json.loads(trace_data)
         except json.JSONDecodeError:
-            print("Warning: Could not parse trace data as JSON")
-            return []
+            # Might be raw Appium XML – try that
+            return list(_extract_sc_terms_from_appium_xml(trace_data))
     else:
         data = trace_data
         
@@ -47,9 +124,21 @@ def extract_sc_terms(trace_data: Optional[str | dict]) -> list[str]:
         
     # Get last 4 steps (buggy state area)
     last_4_steps = steps[-4:] if len(steps) >= 4 else steps
-    sc_terms = set()
+    sc_terms: set[str] = set()
     
     for step in last_4_steps:
+        # ── Appium page_source XML (our agent format) ──
+        page_source = step.get("page_source", "")
+        if page_source:
+            sc_terms.update(_extract_sc_terms_from_appium_xml(page_source))
+
+        # ── Explicit resource-id / accessibility-id lists from our agent ──
+        for rid in step.get("resource_ids", step.get("accessibility_ids", [])):
+            if isinstance(rid, str) and rid:
+                short = rid.rsplit("/", 1)[-1]
+                if short:
+                    sc_terms.add(short)
+
         # Handle different step formats
         screen = step.get("screen", step.get("ui_state", {}))
         
@@ -85,19 +174,28 @@ def extract_sc_terms(trace_data: Optional[str | dict]) -> list[str]:
                 
         # Format 3: Direct action targets
         action = step.get("action", {})
-        target = action.get("target", action.get("element", {}))
-        if isinstance(target, dict):
-            for key in ['resource-id', 'resourceId', 'accessibility-id', 'accessibilityId']:
-                val = target.get(key, "")
-                if val:
-                    sc_term = val.rsplit("/", 1)[-1]
-                    if sc_term:
-                        sc_terms.add(sc_term)
+        if isinstance(action, dict):
+            target = action.get("target", action.get("element", {}))
+            if isinstance(target, dict):
+                for key in ['resource-id', 'resourceId', 'accessibility-id', 'accessibilityId',
+                            'locator', 'locator_value']:
+                    val = target.get(key, "")
+                    if val:
+                        sc_term = str(val).rsplit("/", 1)[-1]
+                        if sc_term:
+                            sc_terms.add(sc_term)
+            # Also extract locator from action itself
+            locator = action.get("locator", action.get("locator_value", ""))
+            if locator and isinstance(locator, str):
+                short = locator.rsplit("/", 1)[-1]
+                if short and len(short) > 2:
+                    sc_terms.add(short)
     
     # Remove unimportant/generic terms
     unimportant_words = {
         "NO_ID", "BACK_MODAL", "null", "undefined", "none", 
-        "root", "content", "container", "layout", "view"
+        "root", "content", "container", "layout", "view",
+        "hierarchy", "android.widget.FrameLayout",
     }
     
     for word in unimportant_words:
@@ -111,7 +209,10 @@ def extract_gs_terms(trace_data: Optional[str | dict]) -> list[str]:
     Extract GUI Screen terms from an execution trace.
     
     GS terms are the Activity/Fragment names representing screens.
-    These help identify which UI screens are related to the bug.
+    Supports:
+    - Ladybug format (``steps[].screen.activity / .window``)
+    - Appium/agent format (``steps[].activity``, ``steps[].screen_name``,
+      or parsed from ``page_source`` XML)
     
     Args:
         trace_data: JSON string or dict containing the execution trace
@@ -127,8 +228,8 @@ def extract_gs_terms(trace_data: Optional[str | dict]) -> list[str]:
         try:
             data = json.loads(trace_data)
         except json.JSONDecodeError:
-            print("Warning: Could not parse trace data as JSON")
-            return []
+            # Might be raw XML
+            return list(_extract_gs_terms_from_appium_xml(trace_data))
     else:
         data = trace_data
         
@@ -140,13 +241,18 @@ def extract_gs_terms(trace_data: Optional[str | dict]) -> list[str]:
         
     # Get last 4 steps
     last_4_steps = steps[-4:] if len(steps) >= 4 else steps
-    gs_terms = set()
+    gs_terms: set[str] = set()
     
     for step in last_4_steps:
+        # ── Appium page_source XML ──
+        page_source = step.get("page_source", "")
+        if page_source:
+            gs_terms.update(_extract_gs_terms_from_appium_xml(page_source))
+
         screen = step.get("screen", step.get("ui_state", {}))
         
         # Activity name (Android)
-        activity = screen.get("activity", "")
+        activity = screen.get("activity", step.get("activity", ""))
         if activity:
             # Extract Activity name before "(Window..."
             gs_activity = re.search(r'(\w+)(\(Window.*\))', activity)
@@ -155,7 +261,7 @@ def extract_gs_terms(trace_data: Optional[str | dict]) -> list[str]:
             else:
                 # Try to get last part of activity path
                 activity_name = activity.rsplit(".", 1)[-1]
-                if activity_name and activity_name not in ["Activity"]:
+                if activity_name and activity_name not in ("Activity",):
                     gs_terms.add(activity_name)
                     
         # Window/Fragment name
@@ -175,6 +281,12 @@ def extract_gs_terms(trace_data: Optional[str | dict]) -> list[str]:
         screen_name = step.get("screen_name", step.get("current_screen", ""))
         if screen_name:
             gs_terms.add(screen_name)
+
+        # State signature can contain screen identifiers
+        sig = step.get("state_signature", screen.get("state_signature", ""))
+        if sig and isinstance(sig, str) and len(sig) > 3:
+            if not sig.startswith("sig_"):
+                gs_terms.add(sig)
             
     return list(gs_terms)
 

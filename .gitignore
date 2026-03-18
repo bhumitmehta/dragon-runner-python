@@ -12,7 +12,7 @@ __pycache__/
 .Python
 
 build/
-
+frontend/node_modules
 /node_modules/
 /demo-app/node_modules/
 **/python_agent/node_modules/

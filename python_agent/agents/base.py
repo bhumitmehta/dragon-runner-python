@@ -84,8 +84,8 @@ class BaseAgent:
             self.logger.error("ask_vision_cached  failed: %s -- falling back to text-only", exc)
             # Fallback: try text-only with whatever cached analysis exists
             try:
-                from vlm import get_text_response
-                fallback = get_text_response(full_prompt)
+                from ..vlm import get_text_response as _fallback_text
+                fallback = _fallback_text(full_prompt)
                 self.logger.info("ask_vision_cached  text-only fallback succeeded (len=%d)", len(fallback))
                 return fallback
             except Exception:

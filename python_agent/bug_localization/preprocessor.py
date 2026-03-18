@@ -21,21 +21,81 @@ except ImportError:
     print("Warning: NLTK not available. Run: pip install nltk")
 
 
-# Default stop words for code/bug reports
-DEFAULT_STOP_WORDS = {
-    # Programming keywords
-    'public', 'private', 'protected', 'static', 'final', 'void', 'class', 'interface',
-    'extends', 'implements', 'import', 'package', 'return', 'new', 'this', 'super',
-    'try', 'catch', 'throw', 'throws', 'finally', 'if', 'else', 'switch', 'case',
-    'default', 'for', 'while', 'do', 'break', 'continue', 'true', 'false', 'null',
-    'boolean', 'byte', 'char', 'short', 'int', 'long', 'float', 'double', 'string',
-    # Common words
+# ── Stop word sets (language-aware) ──────────────────────────────────
+
+# Common English / documentation stop words (language agnostic)
+_COMMON_STOP_WORDS = {
     'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of',
     'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been', 'be', 'have',
     'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may',
     'might', 'must', 'shall', 'can', 'need', 'dare', 'ought', 'used', 'i', 'you',
     'he', 'she', 'it', 'we', 'they', 'what', 'which', 'who', 'whom', 'this', 'that',
-    'these', 'those', 'am', 'being', 'very', 'just', 'also', 'now', 'then'
+    'these', 'those', 'am', 'being', 'very', 'just', 'also', 'now', 'then',
+}
+
+# Java-specific keywords (original Ladybug set)
+_JAVA_STOP_WORDS = {
+    'public', 'private', 'protected', 'static', 'final', 'void', 'class', 'interface',
+    'extends', 'implements', 'import', 'package', 'return', 'new', 'this', 'super',
+    'try', 'catch', 'throw', 'throws', 'finally', 'if', 'else', 'switch', 'case',
+    'default', 'for', 'while', 'do', 'break', 'continue', 'true', 'false', 'null',
+    'boolean', 'byte', 'char', 'short', 'int', 'long', 'float', 'double', 'string',
+    'abstract', 'assert', 'enum', 'instanceof', 'native', 'synchronized',
+    'transient', 'volatile',
+}
+
+# JavaScript / TypeScript keywords
+_JS_TS_STOP_WORDS = {
+    'var', 'let', 'const', 'function', 'return', 'if', 'else', 'switch', 'case',
+    'default', 'for', 'while', 'do', 'break', 'continue', 'true', 'false', 'null',
+    'undefined', 'typeof', 'instanceof', 'new', 'this', 'class', 'extends', 'super',
+    'import', 'export', 'from', 'require', 'module', 'async', 'await', 'yield',
+    'try', 'catch', 'finally', 'throw', 'void', 'delete', 'in', 'of',
+    'interface', 'type', 'enum', 'namespace', 'declare', 'readonly', 'abstract',
+    'implements', 'keyof', 'any', 'unknown', 'never', 'string', 'number', 'boolean',
+    'object', 'symbol', 'bigint', 'as', 'is', 'satisfies',
+    # React / RN common noise
+    'react', 'usestate', 'useeffect', 'useref', 'usecallback', 'usememo',
+    'props', 'children', 'render', 'component', 'memo', 'fragment',
+    'stylesheet', 'view', 'text', 'touchableopacity', 'flatlist', 'scrollview',
+    'safeareaview', 'statusbar', 'textinput', 'image', 'button', 'platform',
+    'dimensions', 'stylesheet',
+}
+
+# Kotlin keywords (Android)
+_KOTLIN_STOP_WORDS = {
+    'fun', 'val', 'var', 'class', 'object', 'interface', 'abstract', 'override',
+    'private', 'protected', 'internal', 'public', 'open', 'final', 'sealed',
+    'data', 'enum', 'companion', 'import', 'package', 'return', 'if', 'else',
+    'when', 'for', 'while', 'do', 'break', 'continue', 'true', 'false', 'null',
+    'this', 'super', 'in', 'is', 'as', 'by', 'lateinit', 'suspend', 'coroutine',
+}
+
+# Map language keys to stop-word sets
+LANGUAGE_STOP_WORDS = {
+    'java':   _JAVA_STOP_WORDS | _COMMON_STOP_WORDS,
+    'kotlin': _KOTLIN_STOP_WORDS | _COMMON_STOP_WORDS,
+    'js':     _JS_TS_STOP_WORDS | _COMMON_STOP_WORDS,
+    'ts':     _JS_TS_STOP_WORDS | _COMMON_STOP_WORDS,
+    'tsx':    _JS_TS_STOP_WORDS | _COMMON_STOP_WORDS,
+    'jsx':    _JS_TS_STOP_WORDS | _COMMON_STOP_WORDS,
+}
+
+# Default combines all language keywords
+DEFAULT_STOP_WORDS = _COMMON_STOP_WORDS | _JAVA_STOP_WORDS | _JS_TS_STOP_WORDS | _KOTLIN_STOP_WORDS
+
+# Directories that should NEVER be indexed for source embeddings
+SKIP_DIRS = {
+    'node_modules', '.git', '__pycache__', 'build', 'dist', '.gradle',
+    '.idea', '.vscode', 'coverage', '.next', '.expo', 'android/build',
+    'ios/build', 'ios/Pods', 'Pods',
+}
+
+# File-name patterns to skip
+SKIP_FILE_PATTERNS = {
+    '.lock', '.min.js', '.min.css', '.map', '.snap',
+    'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml',
+    '.d.ts',   # TypeScript declaration files are pure noise
 }
 
 
@@ -51,14 +111,21 @@ class Preprocessor:
     - Lemmatization
     """
     
-    def __init__(self, stop_words: Optional[set] = None):
+    def __init__(self, stop_words: Optional[set] = None, language: Optional[str] = None):
         """
         Initialize the preprocessor.
         
         Args:
             stop_words: Custom set of stop words. Uses default if None.
+            language: Language key ('java', 'js', 'ts', 'kotlin') for targetted
+                      stop-word removal.  Falls back to DEFAULT_STOP_WORDS.
         """
-        self.stop_words = stop_words if stop_words else DEFAULT_STOP_WORDS
+        if stop_words:
+            self.stop_words = stop_words
+        elif language and language.lstrip('.') in LANGUAGE_STOP_WORDS:
+            self.stop_words = LANGUAGE_STOP_WORDS[language.lstrip('.')]
+        else:
+            self.stop_words = DEFAULT_STOP_WORDS
         
         if NLTK_AVAILABLE:
             self.lemmatizer = WordNetLemmatizer()

@@ -10,7 +10,87 @@ load_dotenv(_env_file, override=True)  # override=True ensures new values are lo
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-# App under test (Android)
+# ════════════════════════════════════════════════════════════════════
+#  App Profiles — predefined configurations for known apps.
+#  Select at runtime with: --app <profile_name>  or  APP_PROFILE env var.
+# ════════════════════════════════════════════════════════════════════
+
+APP_PROFILES: dict[str, dict] = {
+    "saucelabs-demo": {
+        "app_package": "com.saucelabs.mydemoapp.rn",
+        "app_activity": ".MainActivity",
+        "apk_path": str(
+            REPO_ROOT
+            / "appium-wdio-react-native-ios-android"
+            / "app"
+            / "android"
+            / "Android-MyDemoAppRN.1.3.0.build-244.apk"
+        ),
+        "source_code_dir": str(REPO_ROOT / "demo-app"),
+        "source_extensions": ".js,.ts,.tsx,.jsx",
+        "description": "SauceLabs My Demo App (React Native)",
+    },
+    "demo-app": {
+        "app_package": "com.demoappgenerated",
+        "app_activity": ".MainActivity",
+        "apk_path": str(
+            REPO_ROOT
+            / "demo-app"
+            / "android"
+            / "app"
+            / "build"
+            / "outputs"
+            / "apk"
+            / "debug"
+            / "app-debug.apk"
+        ),
+        "source_code_dir": str(REPO_ROOT / "demo-app"),
+        "source_extensions": ".js,.ts,.tsx,.jsx",
+        "description": "Demo App Generated (React Native)",
+    },
+    # Add more profiles here, e.g.:
+    # "my-native-app": {
+    #     "app_package": "com.example.myapp",
+    #     "app_activity": ".MainActivity",
+    #     "apk_path": "/path/to/myapp.apk",
+    #     "source_code_dir": "/path/to/myapp/src",
+    #     "source_extensions": ".java,.kt,.xml",
+    #     "description": "My Native Android App",
+    # },
+}
+
+# Which profile to use (CLI --app flag overrides this)
+_active_profile_name = os.getenv("APP_PROFILE", "").strip()
+
+
+def apply_app_profile(profile_name: str) -> None:
+    """
+    Activate an app profile, overwriting the module-level config variables.
+
+    Called either from ``main.py`` when ``--app <name>`` is passed, or from
+    here when ``APP_PROFILE`` env-var is set.
+    """
+    global APP_PACKAGE, APP_ACTIVITY, APK_PATH, SOURCE_CODE_DIR, SOURCE_CODE_EXTENSIONS
+    profile = APP_PROFILES.get(profile_name)
+    if not profile:
+        avail = ", ".join(APP_PROFILES.keys()) or "(none)"
+        raise ValueError(
+            f"Unknown app profile '{profile_name}'. Available: {avail}"
+        )
+    APP_PACKAGE = profile["app_package"]
+    APP_ACTIVITY = profile["app_activity"]
+    APK_PATH = Path(profile["apk_path"])
+    SOURCE_CODE_DIR = Path(profile["source_code_dir"])
+    SOURCE_CODE_EXTENSIONS = [
+        e.strip() for e in profile.get("source_extensions", "").split(",") if e.strip()
+    ] or SOURCE_CODE_EXTENSIONS
+    # Re-derive capabilities with the new values
+    ANDROID_CAPABILITIES["appium:app"] = str(APK_PATH)
+    ANDROID_CAPABILITIES["appium:appPackage"] = APP_PACKAGE
+    ANDROID_CAPABILITIES["appium:appActivity"] = APP_ACTIVITY
+
+
+# App under test (Android) — defaults, may be overridden by profile
 APP_PACKAGE = os.getenv("APP_PACKAGE", "com.saucelabs.mydemoapp.rn")
 APP_ACTIVITY = os.getenv("APP_ACTIVITY", ".MainActivity")
 
@@ -86,4 +166,12 @@ SOURCE_CODE_EXTENSIONS = [
 ]
 BUG_LOCALIZATION_TOP_N = int(os.getenv("BUG_LOCALIZATION_TOP_N", "10"))
 TRACES_DIR = ARTIFACTS_DIR / "traces"
+
+# ── Auto-apply profile if set via env var ────────────────────────────
+if _active_profile_name:
+    try:
+        apply_app_profile(_active_profile_name)
+    except ValueError as exc:
+        import warnings
+        warnings.warn(str(exc))
 

@@ -76,10 +76,10 @@ Return a JSON array where each element has this exact structure:
 ]
 
 RULES:
-- Extract at least 8 features, up to 25.
-- priority=high for core user flows (login, add to cart, checkout, navigation).
-- priority=medium for secondary flows (sort, filter, search, profile).
-- priority=low for edge cases (empty states, error handling, accessibility).
+- Extract all the features 
+- priority=high for core user flows (login, add to cart, checkout, navigation for example).
+- priority=medium for secondary flows (sort, filter, search, profile for example).
+- priority=low for edge cases (empty states, error handling, accessibility ).
 - verification_hints must be concrete and actionable.
 - Return ONLY the JSON array, no explanation.
 """
@@ -87,22 +87,48 @@ RULES:
         return self._parse_features(raw)
 
     def ingest_from_file(self, doc_path: Path, **kwargs) -> List[Dict[str, Any]]:
-        """Read a documentation file and ingest it."""
+        """Read a documentation file and ingest it. Supports PDF and text files."""
         if not doc_path.exists():
             logger.warning("Doc file not found: %s", doc_path)
             return []
-        text = doc_path.read_text(encoding="utf-8", errors="replace")
+        
+        if doc_path.suffix.lower() == '.pdf':
+            text = self._extract_text_from_pdf(doc_path)
+        else:
+            text = doc_path.read_text(encoding="utf-8", errors="replace")
+        
         return self.ingest_documentation(text, **kwargs)
 
+    def _extract_text_from_pdf(self, pdf_path: Path) -> str:
+        """Extract text content from a PDF file."""
+        try:
+            from PyPDF2 import PdfReader
+            reader = PdfReader(str(pdf_path))
+            text = ""
+            for page in reader.pages:
+                text += page.extract_text() + "\n"
+            logger.info("Extracted %d characters from PDF: %s", len(text), pdf_path)
+            return text
+        except ImportError:
+            logger.error("PyPDF2 not installed. Install with: pip install PyPDF2")
+            return ""
+        except Exception as e:
+            logger.error("Failed to extract text from PDF %s: %s", pdf_path, e)
+            return ""
+
     def ingest_from_directory(self, docs_dir: Path, **kwargs) -> List[Dict[str, Any]]:
-        """Read all .md / .txt files in a directory and ingest."""
+        """Read all documentation files in a directory and ingest. Supports .md, .txt, .rst, .pdf"""
         if not docs_dir.exists():
             logger.warning("Docs directory not found: %s", docs_dir)
             return []
         combined = []
-        for ext in ("*.md", "*.txt", "*.rst"):
+        for ext in ("*.md", "*.txt", "*.rst", "*.pdf"):
             for f in sorted(docs_dir.glob(ext)):
-                combined.append(f"=== {f.name} ===\n{f.read_text(encoding='utf-8', errors='replace')}\n")
+                if f.suffix.lower() == '.pdf':
+                    text = self._extract_text_from_pdf(f)
+                else:
+                    text = f.read_text(encoding='utf-8', errors='replace')
+                combined.append(f"=== {f.name} ===\n{text}\n")
         if not combined:
             logger.warning("No documentation files found in %s", docs_dir)
             return []

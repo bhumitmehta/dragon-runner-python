@@ -7,6 +7,12 @@ google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
 tinydb>=4.8.0
+# Screen graph & API
+networkx>=3.0
+fastapi>=0.100.0
+uvicorn[standard]>=0.20.0
+# PDF processing
+PyPDF2>=3.0.0
 # Bug Localization (Ladybug integration)
 torch>=2.0.0
 transformers>=4.30.0

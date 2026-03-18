@@ -9,7 +9,8 @@ An autonomous mobile app testing platform powered by **12 specialized AI agents*
 ```mermaid
 flowchart TB
     classDef entry fill:#1a1a2e,color:#e0e0ff,stroke:#4a4a8a,stroke-width:2px
-    classDef orch fill:#0f3460,color:#fff,stroke:#16213e,stroke-width:3px,font-weight:bold
+    classDef policy fill:#0f3460,color:#fff,stroke:#16213e,stroke-width:3px,font-weight:bold
+    classDef engine fill:#163050,color:#b0d0ff,stroke:#2a5a8a,stroke-width:2px,stroke-dasharray:4
     classDef storage fill:#1a1a2e,color:#a0cfff,stroke:#3a6ea5,stroke-width:2px,stroke-dasharray:5
     classDef explore fill:#1b4332,color:#d8f3dc,stroke:#2d6a4f,stroke-width:2px
     classDef plan fill:#3c1642,color:#e8d5f5,stroke:#7b2d8e,stroke-width:2px
@@ -19,95 +20,159 @@ flowchart TB
     classDef llm fill:#2d1b69,color:#c9b1ff,stroke:#5c3d99,stroke-width:2px
     classDef device fill:#7f4f24,color:#fff,stroke:#b08968,stroke-width:2px
 
-    CLI["main.py\n━━━━━━━━━━━━━\n--explorer\n--multiagent --task\n--smart-test"]:::entry
+    CLI["main.py: --explorer | --multiagent --task | --smart-test"]:::entry
 
-    CLI ==>|"all modes"| ORCH
+    CLI ==>|"1 all modes"| ORCH
 
-    ORCH["ORCHESTRATOR\n━━━━━━━━━━━━━━━━━━━━━━━━\nCentral coordinator\nMode routing | Step loop\nScreen caching | Bug recording"]:::orch
+    subgraph POLICY_LAYER [" POLICY LAYER -- decides WHAT "]
+        direction TB
+        ORCH["ORCHESTRATOR: Thin routing, mode selection, step budget, directive refresh, archetype trigger"]:::policy
+    end
 
-    MEM[("SessionMemory\n──────────\nScreen graph\nAction log\nLoop detector\nBug list\nCoverage")]:::storage
-    KB[("KnowledgeBase\n──────────\nTinyDB\nFeatures\nNav paths\nTest results\nCross-run")]:::storage
+    subgraph EXECUTION [" EXECUTION ENGINE -- decides HOW "]
+        direction TB
+        ENG["ExecutionEngine: Action dispatch, Critic eval, weight update, retry, screen caching"]:::engine
+    end
 
-    ORCH <-.->|"every step"| MEM
-    ORCH <-.->|"smart-test mode"| KB
+    ORCH ==>|"2 delegates all actions"| ENG
 
-    EXP["EXPLORER\n━━━━━━━━━━━━━━━━━\nScreen planning\nVisual inspection\nLoop breaking\nElement priority\nApp reset trigger"]:::explore
+    subgraph MEMORY_LAYER [" PERSISTENT STATE "]
+        direction LR
+        MEM[("SessionMemory: Screen graph, action log, loop detector, bug list, coverage, action weights")]:::storage
+        KB[("KnowledgeBase: TinyDB cross-run, features, nav paths, test results, app archetype, predicted screens")]:::storage
+    end
 
-    NAV["NAVIGATOR\n━━━━━━━━━━━━━━━━━\nUI context capture\nAction execution\nCoordinate fallback\nSafe input strategy"]:::explore
+    ENG <-.->|"3 every step"| MEM
+    ORCH <-.->|"smart-test"| KB
 
-    REC["RECOVERY\n━━━━━━━━━━━━━━━━━\nSession repair\nCrash detection\nDialog dismissal\nLLM-guided fix\nHard reset"]:::explore
+    subgraph PERCEPTION [" PERCEPTION LAYER "]
+        direction LR
+        NAV["NAVIGATOR: UI context capture, action execution, coordinate fallback"]:::explore
+        REC["RECOVERY: Session repair, crash detection, dialog dismissal, hard reset"]:::explore
+        VLM["VLM CACHE: qwen3-vl:235b-cloud, 1 call per unique screen"]:::llm
+    end
 
-    PLAN["PLANNER\n━━━━━━━━━━━━━\nGoal decomposition\nTask sequencing\nLLM plan gen"]:::plan
+    subgraph COGNITION [" COGNITION LAYER "]
+        direction LR
+        PLAN["PLANNER: Session-level goals, ExplorationDirective, time horizon LONG"]:::plan
+        CRIT["CRITIC: evaluate_and_update, verdict + weight push, learning pressure"]:::plan
+        EXP["EXPLORER: Screen-level curiosity, directive-bounded, weight-biased, time horizon SHORT"]:::explore
+    end
 
-    CRIT["CRITIC\n━━━━━━━━━━━━━\nStep evaluation\nPass/fail verdict\nRetry guidance"]:::plan
+    subgraph SKILL [" SKILL LAYER "]
+        direction LR
+        DOC["DOC INGESTION: Parse docs, extract features"]:::smart
+        SGEN["SCRIPT GEN: Feature to script, nav reuse"]:::smart
+        SEXE["SCRIPT EXEC: Run scripts, capture results"]:::smart
+    end
 
-    DOC["DOC INGESTION\n━━━━━━━━━━━━━━━━\nParse docs\nExtract features\nPriority ranking"]:::smart
+    subgraph AUDIT [" QUALITY GATES "]
+        direction LR
+        A11Y["ACCESSIBILITY: WCAG per-screen, parallel audit"]:::quality
+        SEC["SECURITY: Data leak scan, auth + injection"]:::quality
+    end
 
-    SGEN["SCRIPT GEN\n━━━━━━━━━━━━━━━━\nFeature to script\nNav script reuse\nVerification logic"]:::smart
+    subgraph OUTPUT [" OUTPUT "]
+        direction LR
+        REP["REPORTER: Markdown report, bug summary"]:::output
+        BUG["BUG LOCALIZER: UniXcoder, source mapping"]:::output
+    end
 
-    SEXE["SCRIPT EXEC\n━━━━━━━━━━━━━━━━\nRun scripts\nCapture results\nReport status"]:::smart
+    TXT["TEXT-ONLY LLM: gpt-oss:120b-cloud, fast reasoning, cached visual context"]:::llm
 
-    A11Y["ACCESSIBILITY\n━━━━━━━━━━━━━━━━━━\nWCAG audit\nPer-screen scoring\nIssue classification"]:::quality
+    DEVICE["APPIUM + UiAutomator2: Android Emulator, click/input/scroll/back, screenshot capture"]:::device
 
-    SEC["SECURITY\n━━━━━━━━━━━━━━━━━━\nData leak scan\nAuth testing\nInjection inputs\nRisk assessment"]:::quality
+    %% ── Core control flow ──
+    ORCH -->|"4 exploration directive"| PLAN
+    PLAN -->|"5 ExplorationDirective: priority + avoid + dwell"| EXP
+    ORCH -->|"6 pick_next_action"| EXP
+    ENG -->|"7 execute action"| NAV
+    ENG -->|"8 repair session"| REC
+    ENG -->|"9 evaluate_and_update"| CRIT
 
-    REP["REPORTER\n━━━━━━━━━━━\nMarkdown report\nBug summary\nRecommendations"]:::output
+    %% ── Critic → Explorer feedback loop (the key new arrow) ──
+    CRIT -->|"10 verdict: +1.0 pass / -1.5 fail"| MEM
+    MEM -.->|"11 action weights, penalised set"| EXP
 
-    BUG["BUG LOCALIZER\n━━━━━━━━━━━━━━\nUniXcoder analysis\nSource mapping\nRoot cause hints"]:::output
+    %% ── Smart-test skill flow ──
+    ORCH -->|"12 ingest"| DOC
+    ORCH -->|"13 gen script"| SGEN
+    ORCH -->|"14 exec"| SEXE
 
-    VLM["VLM CACHE + VISION\n━━━━━━━━━━━━━━━━━━━━━━━━━\nqwen3-vl:235b-cloud\n1 call per unique screen\nRetry on failure"]:::llm
+    %% ── Quality gates ──
+    ORCH ==>|"15 parallel audit"| A11Y
+    ORCH ==>|"15 parallel audit"| SEC
 
-    TXT["TEXT-ONLY LLM\n━━━━━━━━━━━━━━━━━━━━━\ngpt-oss:120b-cloud\nFast reasoning\nUses cached visual context\nFallback for VLM errors"]:::llm
+    %% ── Output ──
+    ORCH -->|"16 report"| REP
+    ORCH -->|"17 localize"| BUG
 
-    DEVICE["APPIUM + UiAutomator2\n━━━━━━━━━━━━━━━━━━━━━━━━━\nAndroid Emulator\nClick / Input / Scroll / Back\nScreenshot capture"]:::device
+    %% ── Archetype detection ──
+    KB -.->|"18 app archetype + predicted screens"| ORCH
 
-    ORCH -->|"pick_next_action\nplan_for_new_screen"| EXP
-    ORCH -->|"execute_action_direct"| NAV
-    ORCH -->|"repair / recover"| REC
-    ORCH -->|"generate plan"| PLAN
-    ORCH -->|"evaluate step"| CRIT
-    ORCH -->|"ingest docs"| DOC
-    ORCH -->|"gen script"| SGEN
-    ORCH -->|"exec script"| SEXE
-    ORCH ==>|"parallel audit\n(ThreadPoolExecutor)"| A11Y
-    ORCH ==>|"parallel audit\n(ThreadPoolExecutor)"| SEC
-    ORCH -->|"generate report"| REP
-    ORCH -->|"analyze bug"| BUG
-
-    NAV <-->|"Appium commands"| DEVICE
-    REC -->|"restart driver"| DEVICE
-
-    EXP -->|"visual inspect\nscreen analysis"| VLM
-    A11Y -->|"vision-cached audit"| VLM
-    VLM -->|"cached desc + prompt"| TXT
-    PLAN & CRIT & REC -->|"ask_text()"| TXT
-    SGEN & SEXE -->|"ask_text()"| TXT
-    NAV -->|"resolve action (task mode)"| TXT
-    REP -->|"ask_text()"| TXT
+    %% ── Device + LLM connections ──
+    NAV <-->|"Appium"| DEVICE
+    REC -->|"restart"| DEVICE
+    EXP -->|"visual inspect"| VLM
+    A11Y -->|"vision-cached"| VLM
+    VLM -->|"cached desc"| TXT
+    PLAN & EXP & CRIT -->|"ask_text"| TXT
+    NAV & REC & SGEN -->|"ask_text"| TXT
+    REP -->|"ask_text"| TXT
 
     DOC -->|"features"| KB
-    SGEN -.->|"reuse nav paths"| KB
-    SEXE -.->|"store results"| KB
-    EXP -.->|"loop check / screen graph"| MEM
+    SGEN -.->|"nav paths"| KB
+    SEXE -.->|"results"| KB
 ```
+
+### Three Intelligence Layers
+
+| Layer | Agents | Time Horizon | Responsibility |
+|-------|--------|-------------|----------------|
+| **Perception** | Navigator, Recovery, VLM Cache | Immediate | Capture UI state, execute atomic actions, repair failures |
+| **Cognition** | Planner, Critic, Explorer | Session / Screen | Planner owns long-term objectives; Explorer owns short-term curiosity within Planner directives; Critic provides learning pressure |
+| **Skill** | DocIngestion, ScriptGen, ScriptExec | Feature | Parse docs, generate scripts, execute verifications |
+
+### Key Feedback Loops
+
+| Loop | Mechanism | Effect |
+|------|-----------|--------|
+| **Critic -> Explorer** | `evaluate_and_update()` pushes verdicts as `ActionWeight` (+1.0 pass, -0.3 warn, -1.5 fail) into SessionMemory | Explorer deprioritises Critic-penalised elements; plans sort by weight |
+| **Planner -> Explorer** | `ExplorationDirective` sets priority screens, avoid screens, focus keywords, max screen dwell | Explorer respects session-level strategy; no more oscillation |
+| **KnowledgeBase -> Orchestrator** | `detect_app_archetype()` classifies app (ecommerce, login_centric, etc.) and predicts undiscovered screens | Exploration becomes prediction instead of search |
+| **Orchestrator -> Engine** | Policy/execution separation via `ExecutionEngine` | Orchestrator routes; Engine dispatches actions, evaluates, records, retries |
 
 ### Agent Roles
 
 | # | Agent | Role | Talks To |
 |---|-------|------|----------|
-| 1 | **Orchestrator** | Central coordinator, mode routing, step loop | All agents |
-| 2 | **Explorer** | Screen planning, visual inspection, loop breaking | Orchestrator, VLM, SessionMemory |
-| 3 | **Navigator** | UI action execution, context capture | Orchestrator, Appium, LLM |
-| 4 | **Recovery** | Session repair, crash dismissal | Orchestrator, Appium, LLM |
-| 5 | **Planner** | Goal decomposition, task sequencing | Orchestrator, LLM |
-| 6 | **Critic** | Step evaluation, pass/fail verdicts | Orchestrator, LLM |
-| 7 | **Accessibility** | WCAG audit per screen | Orchestrator, VLM |
-| 8 | **Security** | Data leak scan, auth/injection testing | Orchestrator, LLM |
-| 9 | **DocIngestion** | Parse docs into features | Orchestrator, KnowledgeBase |
-| 10 | **ScriptGenerator** | Feature-to-test-script generation | Orchestrator, KnowledgeBase, LLM |
-| 11 | **ScriptExecutor** | Run generated verification scripts | Orchestrator, KnowledgeBase |
-| 12 | **Reporter** | Markdown report generation | Orchestrator, LLM |
+| 1 | **Orchestrator** | Policy layer: mode routing, directive refresh, archetype trigger | ExecutionEngine, Planner, all agents |
+| 2 | **ExecutionEngine** | Execution layer: action dispatch, Critic eval, weight update, retry | Navigator, Critic, Recovery, SessionMemory |
+| 3 | **Explorer** | Screen-level curiosity, directive-bounded, weight-biased plans | Orchestrator, VLM, SessionMemory |
+| 4 | **Navigator** | UI action execution, context capture | ExecutionEngine, Appium, LLM |
+| 5 | **Recovery** | Session repair, crash dismissal | ExecutionEngine, Appium, LLM |
+| 6 | **Planner** | Session-level objectives, ExplorationDirective generation | Orchestrator, LLM |
+| 7 | **Critic** | Step evaluation + weight push (learning pressure) | ExecutionEngine, SessionMemory, LLM |
+| 8 | **Accessibility** | WCAG audit per screen | Orchestrator, VLM |
+| 9 | **Security** | Data leak scan, auth/injection testing | Orchestrator, LLM |
+| 10 | **DocIngestion** | Parse docs into features | Orchestrator, KnowledgeBase |
+| 11 | **ScriptGenerator** | Feature-to-test-script generation | Orchestrator, KnowledgeBase, LLM |
+| 12 | **ScriptExecutor** | Run generated verification scripts | Orchestrator, KnowledgeBase |
+| 13 | **Reporter** | Markdown report generation | Orchestrator, LLM |
 | -- | **BugLocalizer** | UniXcoder source-level bug mapping | Orchestrator, SessionMemory |
+
+---
+
+## Core Control Loop
+
+```
+perception -> reasoning -> action -> evaluation -> adaptation
+     |            |           |           |             |
+  Navigator    Planner    Navigator    Critic      Explorer
+  VLM Cache    Explorer   Engine       Weights     Re-plans
+```
+
+This is the **reinforcement learning control loop** implemented with symbolic + LLM reasoning instead of gradient descent. The Critic's weight signal is the reward function; the Explorer's element selection is the policy.
 
 ---
 
@@ -116,6 +181,10 @@ flowchart TB
 - **Autonomous Exploration** -- discovers screens, plans per-screen strategies, breaks loops with escalating resets
 - **Visual Bug Detection** -- VLM-powered screenshot analysis finds layout issues, overlaps, missing images, contrast problems
 - **VLM Caching** -- one vision call per unique screen; subsequent calls use fast text-only model with cached context
+- **Critic Learning Pressure** -- verdicts become action weights that bias Explorer element selection during the run
+- **Planner Directives** -- session-level strategy constrains Explorer curiosity (focus keywords, avoid screens, dwell limits)
+- **App Archetype Detection** -- KnowledgeBase classifies app type and predicts undiscovered screens
+- **Policy/Execution Separation** -- Orchestrator routes (WHAT); ExecutionEngine dispatches (HOW)
 - **Session Crash Recovery** -- auto-detects dead UiAutomator2 sessions and restarts the driver transparently
 - **Accessibility Auditing** -- WCAG-based scoring on every discovered screen (parallel, end-of-session)
 - **Security Scanning** -- data leak detection, auth screen testing, injection input generation
@@ -159,13 +228,15 @@ python -m python_agent.main --explorer --max-steps 20
 ```
 
 The explorer will:
-1. Launch the app and capture the initial screen
-2. Create a **screen plan** prioritising navigation > actions > other elements
-3. Execute actions, detect screen changes, and **replan** on every new screen
-4. Run **visual inspection** (VLM) on each unique screen
-5. Detect and break **action loops** with escalating strategies (menu nav -> force-click -> app reset)
-6. Run **accessibility + security audits** in parallel at session end
-7. Generate a **Markdown report** with all bugs, scores, and recommendations
+1. Launch the app and generate a **Planner directive** (session-level strategy)
+2. Capture the initial screen and create a **weight-biased screen plan**
+3. Execute actions via the **ExecutionEngine**, which evaluates each via the **Critic**
+4. Critic verdicts flow as **action weights** back into Explorer's element prioritisation
+5. Detect **app archetype** after 6+ screens (predict undiscovered screens)
+6. **Refresh directive** every 20 steps (re-assess coverage, shift focus)
+7. Break **action loops** with escalating strategies (menu nav -> force-click -> app reset)
+8. Run **accessibility + security audits** in parallel at session end
+9. Generate a **Markdown report** with all bugs, scores, and recommendations
 
 ### Task Mode (Natural Language)
 
@@ -221,18 +292,20 @@ python_agent/
 ├── config.py                # All configuration
 ├── appium_controller.py     # Appium driver wrapper
 ├── vlm.py                   # VLM/LLM + caching layer
-├── session_memory.py        # Crash-resilient state persistence
+├── session_memory.py        # Crash-resilient state + action weights
 ├── navigation_memory.py     # Screen graph for navigation
+├── knowledge_base.py        # TinyDB cross-run memory + archetype detection
 ├── ui_extract.py            # XML page source parsing
 ├── logging_config.py        # Rotating file + console logging
 ├── agents/
 │   ├── base.py              # BaseAgent with LLM/VLM interface
-│   ├── orchestrator.py      # Central coordinator
-│   ├── explorer.py          # Curiosity-driven exploration
+│   ├── orchestrator.py      # Policy layer (thin routing)
+│   ├── execution_engine.py  # Execution layer (dispatch + eval + record)
+│   ├── explorer.py          # Curiosity-driven exploration (directive-bounded)
 │   ├── navigator.py         # Action execution
 │   ├── recovery.py          # Session repair
-│   ├── planner.py           # Task plan generation
-│   ├── critic.py            # Step evaluation
+│   ├── planner.py           # Session strategy + ExplorationDirective
+│   ├── critic.py            # Evaluation + weight feedback
 │   ├── accessibility.py     # WCAG auditing
 │   ├── security.py          # Security scanning
 │   ├── reporter.py          # Markdown report generation
@@ -274,6 +347,23 @@ python_agent/
 | 2 | **High** | Premature validation fires on placeholder text |
 | 3 | Medium | Toast notification overlaps interactive buttons |
 | 4 | Low | Disabled button has poor contrast (fails WCAG-AA) |
+
+---
+
+## App Archetype Detection
+
+After 6+ screens are discovered, the KnowledgeBase analyses all element IDs against 6 archetype signal sets:
+
+| Archetype | Signal Keywords |
+|-----------|----------------|
+| **ecommerce** | cart, checkout, price, product, catalog, shipping |
+| **login_centric** | login, sign in, register, password, forgot password |
+| **media_browser** | video, play, gallery, photo, camera, stream |
+| **form_enterprise** | form, submit, dropdown, date picker, upload, table |
+| **social** | feed, post, like, comment, share, follow, message |
+| **navigation_heavy** | map, location, directions, gps, nearby, route |
+
+The detected archetype **predicts undiscovered screens** (e.g. ecommerce app with no "checkout" screen found yet), turning exploration from search into anticipation.
 
 ---
 

@@ -3,6 +3,13 @@ Bug Localization Integration for AI Agent
 
 This module provides integration between the Bug Localizer and the AI Agent.
 It can analyze detected bugs and identify potential source file locations.
+
+Follows Ladybug's architecture:
+1. Index source files (filtering out node_modules/build/etc.)
+2. Preprocess & embed source code using UniXcoder
+3. On bug detection, preprocess the bug report + expand with SC terms
+4. Rank source files by cosine similarity of embeddings
+5. Optionally boost files matching GS terms to the top
 """
 
 import os
@@ -10,6 +17,9 @@ import json
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+
+# Import the SKIP_DIRS / SKIP_FILE_PATTERNS from preprocessor
+from .preprocessor import SKIP_DIRS, SKIP_FILE_PATTERNS
 
 # Import bug localization components (torch may be absent)
 from .gui_data_extractor import GUIDataExtractor
@@ -21,6 +31,54 @@ except ImportError:
     LocalizationResult = None  # type: ignore[assignment,misc]
     format_results = None  # type: ignore[assignment]
     TORCH_AVAILABLE = False
+
+
+def _should_skip_dir(dir_name: str) -> bool:
+    """Return True if *dir_name* is in the skip list."""
+    return dir_name in SKIP_DIRS
+
+
+def _should_skip_file(file_name: str) -> bool:
+    """Return True if the file matches any skip pattern."""
+    return any(file_name.endswith(pat) for pat in SKIP_FILE_PATTERNS)
+
+
+def collect_source_files(
+    source_dir: str,
+    file_extensions: List[str],
+) -> List[tuple[str, str, str]]:
+    """
+    Walk *source_dir* and collect ``(path, filename, content)`` tuples,
+    **excluding** directories in ``SKIP_DIRS`` and files matching
+    ``SKIP_FILE_PATTERNS``.
+
+    This mirrors Ladybug's ``filter_files`` + ``preprocess_source_code``
+    but is language-agnostic.
+    """
+    source_files: list[tuple[str, str, str]] = []
+    ext_set = {e.lower() for e in file_extensions}
+
+    for root, dirs, files in os.walk(source_dir):
+        # Prune entire subtrees that should never be indexed
+        dirs[:] = [d for d in dirs if not _should_skip_dir(d)]
+
+        for fname in files:
+            if _should_skip_file(fname):
+                continue
+            ext = os.path.splitext(fname)[1].lower()
+            if ext not in ext_set:
+                continue
+            fpath = os.path.join(root, fname)
+            try:
+                with open(fpath, "r", encoding="utf-8", errors="ignore") as fh:
+                    content = fh.read()
+                # Skip tiny / auto-generated files
+                if len(content) < 20:
+                    continue
+                source_files.append((fpath, fname, content))
+            except OSError:
+                continue
+    return source_files
 
 
 class BugLocalizationIntegration:
@@ -86,22 +144,38 @@ class BugLocalizationIntegration:
         self,
         action: Dict[str, Any],
         ui_state: Optional[Dict[str, Any]] = None,
-        screenshot_path: Optional[str] = None
+        screenshot_path: Optional[str] = None,
+        page_source: Optional[str] = None,
+        screen_name: Optional[str] = None,
+        activity: Optional[str] = None,
     ):
         """
         Add a step to the execution trace.
         
+        When *page_source* (Appium XML) is provided the step closely mirrors
+        Ladybug's ``Execution-1.json`` format so that SC/GS extraction works
+        seamlessly with both pipelines.
+        
         Args:
             action: Action performed (from agent)
-            ui_state: Current UI state info
+            ui_state: Current UI state info dict
             screenshot_path: Path to screenshot for this step
+            page_source: Raw Appium page-source XML for this step
+            screen_name: Human-readable screen name (e.g. "Login Screen")
+            activity: Android activity class name
         """
-        step = {
+        step: Dict[str, Any] = {
             "timestamp": datetime.now().isoformat(),
             "action": action,
             "screen": ui_state or {},
-            "screenshot": screenshot_path
+            "screenshot": screenshot_path,
         }
+        if page_source:
+            step["page_source"] = page_source
+        if screen_name:
+            step["screen_name"] = screen_name
+        if activity:
+            step["activity"] = activity
         self.execution_trace["steps"].append(step)
         
     def end_trace(self):
@@ -118,9 +192,17 @@ class BugLocalizationIntegration:
         use_trace: bool = True,
         top_n: int = 10,
         verbose: bool = False
-    ) -> List[LocalizationResult]:
+    ) -> list:
         """
         Localize a detected bug to source files.
+        
+        Follows Ladybug's pipeline:
+        1. Collect source files (with smart exclusions)
+        2. Extract SC / GS terms from execution trace
+        3. Preprocess & embed bug report (expanded with SC terms)
+        4. Preprocess & embed each source file
+        5. Rank by cosine similarity
+        6. Boost files matching GS terms
         
         Args:
             bug_description: Description of the bug (from agent detection)
@@ -129,7 +211,7 @@ class BugLocalizationIntegration:
             verbose: Print debug info
             
         Returns:
-            List of LocalizationResult objects
+            List of LocalizationResult objects (empty list when torch absent)
         """
         if not self.source_code_dir:
             print("Warning: No source code directory configured for localization.")
@@ -141,13 +223,21 @@ class BugLocalizationIntegration:
             if self.localizer is None:
                 print("Warning: Bug localizer unavailable (torch not installed). Skipping localization.")
                 return []
-            results = self.localizer.localize_from_directory(
+
+            # Collect source files using the smart filter
+            source_files = collect_source_files(
+                self.source_code_dir,
+                self.file_extensions,
+            )
+            if verbose:
+                print(f"Collected {len(source_files)} source files from {self.source_code_dir}")
+
+            results = self.localizer.localize_bug(
                 bug_report=bug_description,
-                source_dir=self.source_code_dir,
-                file_extensions=self.file_extensions,
+                source_files=source_files,
                 trace_data=trace_data,
                 top_n=top_n,
-                verbose=verbose
+                verbose=verbose,
             )
             
             # Store for reporting

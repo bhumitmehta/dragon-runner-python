@@ -1,0 +1,177 @@
+flowchart TB
+    classDef user fill:#1a1a2e,color:#e0e0ff,stroke:#4a4a8a,stroke-width:2px
+    classDef core fill:#0f3460,color:#fff,stroke:#16213e,stroke-width:3px,font-weight:bold
+    classDef agent fill:#163050,color:#b0d0ff,stroke:#2a5a8a,stroke-width:2px
+    classDef infra fill:#1b4332,color:#d8f3dc,stroke:#2d6a4f,stroke-width:2px
+    classDef memory fill:#3c1642,color:#e8d5f5,stroke:#7b2d8e,stroke-width:2px
+    classDef llm fill:#2d1b69,color:#c9b1ff,stroke:#5c3d99,stroke-width:2px
+    classDef device fill:#7f4f24,color:#fff,stroke:#b08968,stroke-width:2px
+    classDef frontend fill:#0a4d4a,color:#c5fff8,stroke:#12776e,stroke-width:2px
+    classDef ladybug fill:#641220,color:#ffd6d6,stroke:#a4133c,stroke-width:2px
+    classDef wdio fill:#432818,color:#ffe0b2,stroke:#8d5524,stroke-width:2px
+    classDef demoapp fill:#4a0e0e,color:#ffcccc,stroke:#8b1a1a,stroke-width:2px
+    classDef adk fill:#0d3b66,color:#bee3f8,stroke:#1a6faa,stroke-width:2px
+
+    %% ═══════════════════════════════════════════════
+    %%  TOP-LEVEL: USER ENTRY POINTS
+    %% ═══════════════════════════════════════════════
+
+    USER["👤 User / Developer"]:::user
+
+    USER -->|"CLI: python -m python_agent.main"| CLI
+    USER -->|"Browser: localhost:5173"| FE_APP
+    USER -->|"GitHub Issue Created"| PROBOT
+
+    %% ═══════════════════════════════════════════════
+    %%  PROJECT 1: PYTHON AGENT (12-Agent System)
+    %% ═══════════════════════════════════════════════
+
+    subgraph PYTHON_AGENT ["🐉 python_agent/ — AI Multi-Agent Mobile Testing"]
+        direction TB
+
+        CLI["main.py CLI --explorer | --multiagent --task | --smart-test --workflow | --interactive"]:::core
+
+        subgraph POLICY ["POLICY LAYER — decides WHAT"]
+            direction TB
+            ORCH["ORCHESTRATOR Mode routing · directive refresh archetype trigger · step budget parallel audits · report generation"]:::core
+        end
+
+        subgraph EXECUTION ["EXECUTION ENGINE — decides HOW"]
+            direction TB
+            ENG["ExecutionEngine Action dispatch · Critic eval weight update · retry · screen caching"]:::agent
+        end
+
+        subgraph COGNITION ["COGNITION LAYER"]
+            direction LR
+            PLAN["PLANNER Session-level goals ExplorationDirective time horizon: LONG"]:::agent
+            CRIT["CRITIC evaluate_and_update verdict + weight push learning pressure"]:::agent
+            EXP["EXPLORER Screen-level curiosity directive-bounded weight-biased time horizon: SHORT"]:::agent
+        end
+
+        subgraph PERCEPTION ["PERCEPTION LAYER"]
+            direction LR
+            NAV["NAVIGATOR UI context capture action execution coordinate fallback click · input · scroll back · long_press · assert"]:::agent
+            REC["RECOVERY Session repair crash detection dialog dismissal hard reset"]:::agent
+        end
+
+        subgraph SKILL ["SKILL LAYER (Smart-Test)"]
+            direction LR
+            DOC["DOC INGESTION Parse .md/.txt/.rst extract features priority + expected_behavior"]:::agent
+            SGEN["SCRIPT GENERATOR Feature → nav scripts + verification scripts runtime locator resolution"]:::agent
+            SEXE["SCRIPT EXECUTOR Run scripts _execute_step_with_fallback direct → LLM retry"]:::agent
+        end
+
+        subgraph AUDIT ["QUALITY GATES (Parallel)"]
+            direction LR
+            A11Y["ACCESSIBILITY WCAG audit per screen touch targets · contrast missing descriptions"]:::agent
+            SEC["SECURITY Data leak scan auth testing injection inputs password masking"]:::agent
+        end
+
+        subgraph OUTPUT_AGENTS ["OUTPUT LAYER"]
+            direction LR
+            REP["REPORTER Markdown + JSON reports bug summaries coverage analysis"]:::agent
+            BUG_LOC["BUG LOCALIZER UniXcoder embeddings source code mapping bug → file:line"]:::agent
+        end
+
+        subgraph MEM ["PERSISTENT STATE"]
+            direction LR
+            SESS[("SessionMemory (In-Process) Screen graph · action log loop detector · bug list coverage · action weights")]:::memory
+            KB[("KnowledgeBase (TinyDB — Cross-Run) features · nav paths test results · app archetype predicted screens · runs")]:::memory
+        end
+
+        subgraph INFRA_LAYER ["INFRASTRUCTURE"]
+            direction LR
+            APPCTL["AppiumController WebDriver wrapper W3C Actions API element ops · screenshots coordinate tap/type"]:::infra
+            VLM_MOD["VLM Module (vlm.py) Vision: qwen3-vl:235b-cloud Text: gpt-oss:120b-cloud Parallel model racing VLM caching"]:::llm
+            UI_EXT["UI Extract XML page source parsing element bounds extraction coordinate fallback"]:::infra
+            ADB_MOD["ADB Utilities Device connectivity app install/uninstall logcat · emulator mgmt"]:::infra
+            CFG["config.py + .env APP_PACKAGE · APPIUM_HOST OLLAMA_HOST · MAX_STEPS MODEL configs"]:::infra
+        end
+    end
+
+    %% ── Python Agent Internal Flows ──
+    CLI ==>|"all modes"| ORCH
+    ORCH ==>|"delegates actions"| ENG
+    ORCH -->|"exploration directive"| PLAN
+    PLAN -->|"ExplorationDirective: priority · avoid · dwell"| EXP
+    ORCH -->|"pick_next_action"| EXP
+    ENG -->|"execute action"| NAV
+    ENG -->|"repair session"| REC
+    ENG -->|"evaluate_and_update"| CRIT
+    CRIT -->|"verdict: +1.0 pass / -1.5 fail"| SESS
+    SESS -.->|"action weights penalised set"| EXP
+    ORCH -->|"ingest"| DOC
+    ORCH -->|"gen script"| SGEN
+    ORCH -->|"exec"| SEXE
+    ORCH ==>|"parallel audit"| A11Y
+    ORCH ==>|"parallel audit"| SEC
+    ORCH -->|"report"| REP
+    ORCH -->|"localize"| BUG_LOC
+    KB -.->|"app archetype + predicted screens"| ORCH
+    ENG <-.->|"every step"| SESS
+    ORCH <-.->|"smart-test"| KB
+    DOC -->|"features"| KB
+    SGEN -.->|"nav paths"| KB
+    SEXE -.->|"results"| KB
+    NAV --> UI_EXT
+    NAV <-->|"Appium WebDriver"| APPCTL
+    REC -->|"restart"| APPCTL
+    EXP -->|"visual inspect"| VLM_MOD
+    A11Y -->|"vision-cached"| VLM_MOD
+    PLAN & EXP & CRIT -->|"ask_text"| VLM_MOD
+    NAV & REC & SGEN -->|"ask_text"| VLM_MOD
+    REP -->|"ask_text"| VLM_MOD
+    APPCTL --> ADB_MOD
+
+    %% ═══════════════════════════════════════════════
+    %%  PROJECT 2: FRONTEND (React Dashboard)
+    %% ═══════════════════════════════════════════════
+
+    subgraph FRONTEND ["🖥️ frontend/ — React Dashboard (Vite)"]
+        direction TB
+        FE_APP["App.jsx React 18 + React Router Vite dev server :5173"]:::frontend
+        FE_PAGES["Pages Dashboard · Test Results Screen Graph · Reports"]:::frontend
+        FE_HOOKS["hooks.js API data fetching state management"]:::frontend
+        FE_API["api.js REST client → backend knowledge base queries"]:::frontend
+        FE_GRAPH["react-force-graph-2d Screen navigation graph visualization"]:::frontend
+        FE_CHARTS["Recharts Coverage charts bug statistics"]:::frontend
+
+        FE_APP --> FE_PAGES
+        FE_PAGES --> FE_HOOKS
+        FE_HOOKS --> FE_API
+        FE_PAGES --> FE_GRAPH
+        FE_PAGES --> FE_CHARTS
+    end
+
+    FE_API -->|"HTTP REST /api/kb/* endpoints"| KB
+
+    %% ═══════════════════════════════════════════════
+    %%  PROJECT 3: LADYBUG (Bug Localization Service)
+    %% ═══════════════════════════════════════════════
+
+    subgraph LADYBUG ["🐞 ladybug-main/ — Bug Localization Service"]
+        direction TB
+        PROBOT["Probot (Node.js) GitHub App webhook listener listens: issues.opened"]:::ladybug
+        FLASK["Flask Backend (index.py) REST API · bug analysis red_wing.py engine"]:::ladybug
+        RED_WING["Red Wing Bug localization engine code analysis"]:::ladybug
+        LB_DB["Database Layer Issue data · results repository metadata"]:::ladybug
+        UNIXCODER_LB["UniXcoder Code embeddings semantic search"]:::ladybug
+        DOCKER["Docker Compose Dockerfile.backend Dockerfile.probot"]:::ladybug
+
+        PROBOT -->|"issue payload"| FLASK
+        FLASK --> RED_WING
+        RED_WING --> UNIXCODER_LB
+        FLASK --> LB_DB
+        DOCKER -.->|"containerizes"| PROBOT & FLASK
+    end
+
+    PROBOT -->|"comments bug localization results"| GH_REPO
+    GH_REPO["GitHub Repository Issues · Source Code"]:::user
+
+    %% ═══════════════════════════════════════════════
+    %%  EXTERNAL SERVICES (REMOVED)
+    %% ═══════════════════════════════════════════════
+
+    %% ═══════════════════════════════════════════════
+    %%  CROSS-PROJECT RELATIONSHIPS (REMOVED)
+    %% ═══════════════════════════════════════════════

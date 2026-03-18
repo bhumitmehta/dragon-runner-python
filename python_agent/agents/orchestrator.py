@@ -24,7 +24,7 @@ from typing import Any, Dict, List, Optional
 
 from ..logging_config import get_logger
 from .. import adb, appium_server, config
-from ..vlm import get_vlm_cache, reset_vlm_cache
+from ..vlm import get_vlm_cache, reset_vlm_cache, get_text_response
 
 logger = get_logger("agents.orchestrator")
 from ..appium_controller import AppiumController
@@ -50,6 +50,7 @@ from .security import SecurityAgent
 from .doc_ingestion import DocIngestionAgent
 from .script_generator import ScriptGeneratorAgent
 from .script_executor import ScriptExecutorAgent
+from .execution_engine import ExecutionEngine
 from ..knowledge_base import KnowledgeBase
 
 
@@ -66,6 +67,7 @@ class OrchestratorAgent:
         *,
         source_code_dir: Optional[str] = None,
         localize_bugs: Optional[bool] = None,
+        kb: Optional[KnowledgeBase] = None,
     ):
         # Sub-agents (navigator & recovery created after Appium starts)
         self.planner = PlannerAgent()
@@ -80,8 +82,11 @@ class OrchestratorAgent:
         self.script_generator = ScriptGeneratorAgent()
         self.script_executor: Optional[ScriptExecutorAgent] = None
 
-        # Cross-run knowledge base (TinyDB)
-        self.kb = KnowledgeBase()
+        # Execution engine (policy/execution separation)
+        self.engine: Optional[ExecutionEngine] = None
+
+        # Cross-run knowledge base (TinyDB) — shared with API when launched via REST
+        self.kb = kb if kb is not None else KnowledgeBase()
 
         # Infrastructure
         self.controller = AppiumController()
@@ -94,6 +99,9 @@ class OrchestratorAgent:
         # {signature: (page_source, screenshot_path)}
         self._screen_sources: Dict[str, tuple] = {}
 
+        # API stop/status callback (set by api.py via _run_agent_core)
+        self._api_status_callback = None
+
         # Bug localization
         self.localize_bugs = localize_bugs if localize_bugs is not None else config.BUG_LOCALIZATION_ENABLED
         src_dir = source_code_dir or (str(config.SOURCE_CODE_DIR) if config.SOURCE_CODE_DIR else None)
@@ -103,6 +111,32 @@ class OrchestratorAgent:
                 source_code_dir=src_dir,
                 file_extensions=config.SOURCE_CODE_EXTENSIONS,
             )
+
+    # ════════════════════════════════════════════════════════════════
+    #  API integration helpers
+    # ════════════════════════════════════════════════════════════════
+
+    @property
+    def _stop_requested(self) -> bool:
+        """Check whether the REST API has received a stop request."""
+        if self._api_status_callback is None:
+            return False
+        # The API module sets _agent_status["state"] = "stopping"
+        # We read it through the callback's closure.
+        try:
+            from ..api import _agent_status
+            return _agent_status.get("state") == "stopping"
+        except Exception:
+            return False
+
+    def _report_progress(self, step_num: int, max_steps: int, **extra):
+        """Push a progress update to the API (if running via REST)."""
+        if self._api_status_callback is not None:
+            update = {"current_step": step_num, "max_steps": max_steps}
+            if self.memory:
+                update["current_screen"] = getattr(self.memory, "_last_screen_sig", "")
+            update.update(extra)
+            self._api_status_callback(update)
 
     # ════════════════════════════════════════════════════════════════
     #  Setup / teardown
@@ -130,9 +164,23 @@ class OrchestratorAgent:
 
         self.navigator = NavigatorAgent(self.controller)
         self.recovery = RecoveryAgent(self.controller)
-        self.explorer = ExplorerAgent(self.controller)
+        self.explorer = ExplorerAgent(self.controller, kb=self.kb)
         self.script_executor = ScriptExecutorAgent(self.navigator, self.controller)
         return True
+
+    def _create_engine(self):
+        """Create the ExecutionEngine once memory + agents are ready."""
+        self.engine = ExecutionEngine(
+            navigator=self.navigator,
+            critic=self.critic,
+            recovery=self.recovery,
+            explorer=self.explorer,
+            memory=self.memory,
+            kb=self.kb,
+            bug_integration=self.bug_integration,
+            generate_screen_name=self._generate_screen_name,
+        )
+        self.engine.set_screen_cache(self._screen_sources)
 
     def _teardown(self):
         # Log VLM cache stats before shutting down
@@ -198,8 +246,15 @@ class OrchestratorAgent:
         self.memory.mode = mode
         self.memory.user_task = user_task
 
+        # Create execution engine (policy/execution separation)
+        self._create_engine()
+
         if self.bug_integration:
             self.bug_integration.start_trace()
+
+        # ── KnowledgeBase lifecycle ──────────────────────────────────
+        self.kb.current_app_package = config.APP_PACKAGE or ""
+        self.kb.start_run(app_package=self.kb.current_app_package)
 
         try:
             # ── Phase 1: Planning ────────────────────────────────────
@@ -217,6 +272,7 @@ class OrchestratorAgent:
         except Exception as e:
             logger.critical("Fatal error: %s", e, exc_info=True)
         finally:
+            self.kb.end_run()
             report_path = self._save_report()
             # Generate Markdown report via Reporter agent
             self._generate_md_report()
@@ -241,6 +297,12 @@ class OrchestratorAgent:
 
         # Record initial screen
         self.memory.record_screen(ui_ctx["state_signature"], ui_ctx["accessibility_ids"])
+        name = self._generate_screen_name(ui_ctx)
+        self.kb.record_screen(
+            ui_ctx["state_signature"], ui_ctx["accessibility_ids"],
+            screenshot=ui_ctx.get("screenshot_path", ""),
+            name=name,
+        )
 
         # Create plan
         app_desc = f"SauceLabs MyDemoApp (package: {config.APP_PACKAGE})"
@@ -268,27 +330,78 @@ class OrchestratorAgent:
                 plan = plan2
 
         self.memory.set_plan(plan)
-        summary = plan.summary()
-        logger.info("Plan ready: %d goals, %d tasks, %d steps", summary['goals'], summary['tasks'], summary['steps'])
 
-    def _fallback_plan(self, user_task: Optional[str]) -> TestPlan:
-        """Create a minimal single-goal plan when the Planner LLM fails."""
-        from ..session_memory import TestGoal, TestTask, TestStep
-        step = TestStep(id="s1", description=user_task or "Explore the app")
-        task = TestTask(
-            id="t1",
-            name=user_task or "Explore",
-            description=user_task or "Explore the app and find bugs",
-            priority="high",
-            steps=[step],
+        # ── Multi-level decomposition ──
+        # Break complex tasks into subtask trees. Only tasks with
+        # complexity >= 2 get decomposed; simple ones stay as-is.
+        # Each LLM call receives ONLY the specific task + current UI
+        # (not the entire plan tree), keeping prompts focused.
+        # NOTE: ui_elements here are from the initial/home screen.
+        # Decomposition prompts include them as context; tasks targeting
+        # other screens may produce approximate subtasks.  This is
+        # acceptable because the Navigator re-resolves at execution time.
+        logger.info("Decomposing complex tasks...")
+        self.planner.decompose_plan(plan, ui_elements, kb=self.kb)
+        self.memory._persist()   # save expanded subtask tree
+
+        summary = plan.summary()
+        logger.info(
+            "Plan ready: %d goals, %d tasks (depth %d), %d steps",
+            summary['goals'], summary['tasks'], summary.get('max_depth', 0), summary['steps'],
         )
-        goal = TestGoal(
-            id="g1",
-            name="Main",
-            description="Primary testing goal",
-            tasks=[task],
-        )
-        return TestPlan(goals=[goal], created_at=datetime.utcnow().isoformat() + "Z")
+
+    def _generate_screen_name(self, ui_context: Dict[str, Any]) -> str:
+        """Generate a human-readable name for a screen based on extracted UI elements using LLM."""
+        indicators = {
+            "login": ["login", "sign in", "log in"],
+            "home": ["home", "dashboard", "main"],
+            "menu": ["menu", "navigation"],
+            "settings": ["settings", "preferences"],
+            "profile": ["profile", "account"],
+            "cart": ["cart", "basket", "checkout"],
+            "search": ["search"],
+            "product": ["product", "item"],
+        }
+        
+        # Use extracted UI elements (same as agents use)
+        clickable_texts = ui_context.get("clickable_texts", [])
+        accessibility_ids = ui_context.get("accessibility_ids", [])
+        resource_ids = ui_context.get("resource_ids", [])
+        
+        if not clickable_texts and not accessibility_ids and not resource_ids:
+            return "Screen"
+
+        # Use LLM to generate screen name from extracted elements
+        elements_summary = f"Clickable texts: {', '.join(clickable_texts[:10])}\nAccessibility IDs: {', '.join(accessibility_ids[:10])}\nResource IDs: {', '.join(resource_ids[:10])}"
+        prompt = f"""Analyze these mobile app UI elements and suggest a concise screen name (e.g., 'Login Screen', 'Home Screen').
+Focus on the main purpose or content visible. Keep it to 2-3 words ending with 'Screen'.
+
+UI Elements:
+{elements_summary}
+
+Screen name:"""
+
+        try:
+            response = get_text_response(prompt).strip()
+            # Clean the response
+            if response and not response.endswith("Screen"):
+                response += " Screen"
+            # Ensure it's not too long
+            if len(response.split()) > 4:
+                response = " ".join(response.split()[:3]) + " Screen"
+            return response or "Screen"
+        except Exception as e:
+            logger.warning(f"LLM screen name generation failed: {e}")
+            # Fallback to text-based
+            texts = ui_context.get("clickable_texts", [])
+            for screen_type, keywords in indicators.items():
+                for text in texts:
+                    if any(kw.lower() in text.lower() for kw in keywords):
+                        return f"{screen_type.title()} Screen"
+            for text in texts[:3]:
+                if len(text) > 3 and text.isalnum():
+                    return f"{text} Screen"
+            return "Screen"
 
     # ── Execution phase ──────────────────────────────────────────────
 
@@ -297,6 +410,13 @@ class OrchestratorAgent:
         steps_taken = 0
 
         while steps_taken < max_steps:
+            # ── Check for API stop request ──
+            if self._stop_requested:
+                logger.info("Stop requested via API -- halting execution.")
+                break
+
+            self._report_progress(steps_taken, max_steps)
+
             task = self.memory.get_next_task()
             if task is None:
                 logger.info("All tasks completed.")
@@ -307,6 +427,10 @@ class OrchestratorAgent:
             logger.info("Task [%s]: %s", task.priority, task.name)
 
             task_failed = False
+            # Use all_leaf_steps() for leaf tasks (no subtasks) to get
+            # the correct step list. Container tasks with subtasks will
+            # only have their own pre-steps here -- subtasks are returned
+            # as separate tasks by get_next_task().
             for step in task.steps:
                 if step.status in (TaskStatus.COMPLETED.value, TaskStatus.SKIPPED.value):
                     continue
@@ -346,7 +470,7 @@ class OrchestratorAgent:
                         self.memory.mark_step(step, TaskStatus.FAILED, error=result["description"])
                         logger.warning("Step FAIL -- %s", result['description'])
                         task_failed = True
-                        steps_taken += 1
+                        # NOTE: don't increment steps_taken here -- already counted above
 
                 # Handle bug reports
                 if result.get("bug_report"):
@@ -368,22 +492,45 @@ class OrchestratorAgent:
                     self.memory.mark_goal(goal, TaskStatus.COMPLETED)
                     logger.info("Goal completed: %s", goal.name)
 
+            # ── Drain discovery queue between tasks ──
+            if self.explorer and self.explorer.has_pending_discoveries():
+                discoveries = self.explorer.drain_discovery_queue(limit=5)
+                if discoveries:
+                    logger.info("Draining %d queued discoveries between tasks", len(discoveries))
+                    for disc in discoveries:
+                        self.memory.record_screen(
+                            disc.get("screen_sig", "unknown"),
+                            disc.get("element_ids", []),
+                        )
+
         progress = self.memory.plan.summary()
         logger.info("Execution finished -- %d/%d tasks done, %d/%d steps done",
                      progress['tasks_done'], progress['tasks'],
                      progress['steps_done'], progress['steps'])
 
     def _execute_single_step(self, step, task) -> Dict[str, Any]:
-        """Execute one step via the Navigator, with Critic pre- and post-validation."""
+        """Execute one step via the ExecutionEngine (delegated from policy layer)."""
+        # Get UI context and record screen to KB with generated name
         ui_ctx = self.navigator.get_ui_context(f"step_{self.memory.step_counter:04d}")
-        ui_elements = {
-            "accessibility_ids": ui_ctx["accessibility_ids"],
-            "resource_ids": ui_ctx["resource_ids"],
-            "clickable_texts": ui_ctx["clickable_texts"],
-        }
+        ui_ctx["screen_name"] = self._generate_screen_name(ui_ctx)
+        self.kb.record_screen(
+            ui_ctx["state_signature"], ui_ctx["accessibility_ids"],
+            screenshot=ui_ctx.get("screenshot_path", ""),
+            name=ui_ctx["screen_name"],
+        )
+        
+        if self.engine:
+            return self.engine.execute_step(step, task, ui_ctx)
+        else:
+            # Fallback: direct execution
+            ui_elements = {
+                "accessibility_ids": ui_ctx["accessibility_ids"],
+                "resource_ids": ui_ctx["resource_ids"],
+                "clickable_texts": ui_ctx["clickable_texts"],
+            }
 
-        # Record screen
-        self.memory.record_screen(ui_ctx["state_signature"], ui_ctx["accessibility_ids"])
+            # Record screen to memory (KB already done above)
+            self.memory.record_screen(ui_ctx["state_signature"], ui_ctx["accessibility_ids"])
 
         # Cache page source for multi-screen a11y audit (one snapshot per unique sig)
         sig = ui_ctx["state_signature"]
@@ -412,6 +559,13 @@ class OrchestratorAgent:
             if sig_before and sig_after and sig_before != sig_after:
                 self.memory.record_transition(sig_before, step.description, sig_after)
                 self.memory.record_screen(sig_after, post_ctx["accessibility_ids"])
+                self.kb.record_transition(sig_before, step.description, sig_after)
+                name = self._generate_screen_name(post_ctx)
+                self.kb.record_screen(
+                    sig_after, post_ctx["accessibility_ids"],
+                    screenshot=post_ctx.get("screenshot_path", ""),
+                    name=name,
+                )
                 # Cache post-action screen for a11y
                 if sig_after not in self._screen_sources:
                     self._screen_sources[sig_after] = (
@@ -438,21 +592,38 @@ class OrchestratorAgent:
             "description": result.get("description"),
         })
 
-        # Bug localization trace
+        # Bug localization trace — include page_source so SC/GS extraction works
         if self.bug_integration:
+            # Grab the raw Appium page-source XML when available
+            _page_xml = ""
+            try:
+                if self.controller and self.controller.driver:
+                    _page_xml = self.controller.driver.page_source or ""
+            except Exception:
+                pass
             self.bug_integration.add_trace_step(
-                action={"action": result.get("action"), "locator": result.get("locator_value")},
+                action={
+                    "action": result.get("action"),
+                    "locator": result.get("locator_value"),
+                },
                 ui_state={
                     "accessibility_ids": ui_ctx.get("accessibility_ids", []),
+                    "resource_ids": ui_ctx.get("resource_ids", []),
                     "state_signature": ui_ctx.get("state_signature", ""),
                 },
                 screenshot_path=ui_ctx.get("screenshot_path"),
+                page_source=_page_xml,
+                screen_name=ui_ctx.get("screen_name", ""),
+                activity=ui_ctx.get("activity", ""),
             )
 
         return result
 
     def _retry_step(self, step, task, first_result: Dict, max_retries: int) -> bool:
         """Retry a failed step up to ``max_retries`` times."""
+        if self.engine:
+            return self.engine.retry_step(step, task, max_retries)
+        # Fallback: direct retry
         for attempt in range(max_retries):
             logger.debug("Retry %d/%d...", attempt + 1, max_retries)
             time.sleep(1.0)
@@ -491,9 +662,16 @@ class OrchestratorAgent:
 
         localization = None
         if self.bug_integration:
+            # Attempt to grab live page-source for richer analysis
+            _page_xml = ""
+            try:
+                if self.controller and self.controller.driver:
+                    _page_xml = self.controller.driver.page_source or ""
+            except Exception:
+                pass
             analysis = self.bug_integration.analyze_detected_bug(
                 bug_report=bug_desc,
-                page_source="",
+                page_source=_page_xml,
                 screenshot_path=result.get("screenshot"),
             )
             localization = analysis.get("localization", {})
@@ -512,6 +690,11 @@ class OrchestratorAgent:
             step_id=step.id,
         )
         self.memory.add_bug(bug_entry)
+        self.kb.record_bug(
+            bug_id, bug_desc,
+            screenshot=bug_entry.screenshot or "",
+            screen_signature=bug_entry.screen_signature or "",
+        )
 
     # ── Reporting ────────────────────────────────────────────────────
 
@@ -551,6 +734,21 @@ class OrchestratorAgent:
             report["security"] = self.security.full_report()
         if self.explorer:
             report["explorer_stats"] = self.explorer.coverage_stats()
+
+        # Action weights summary (Critic feedback)
+        if self.memory and self.memory.action_weights:
+            top = self.memory.get_top_weighted_elements(10)
+            penalised = list(self.memory.get_penalised_elements())[:10]
+            report["critic_feedback"] = {
+                "total_weighted_elements": len(self.memory.action_weights),
+                "top_rewarded": top[:5],
+                "most_penalised": penalised[:5],
+            }
+
+        # App archetype
+        archetype = self.kb.get_app_archetype()
+        if archetype:
+            report["app_archetype"] = archetype
 
         report_path.write_text(json.dumps(report, indent=2, default=str), encoding="utf-8")
 
@@ -744,13 +942,43 @@ class OrchestratorAgent:
         self.memory = SessionMemory.load(mem_path)
         self.memory.mode = "explorer"
 
+        # Create execution engine
+        self._create_engine()
+
         if self.bug_integration:
             self.bug_integration.start_trace()
 
+        # ── KnowledgeBase lifecycle ──────────────────────────────────
+        self.kb.current_app_package = config.APP_PACKAGE or ""
+        self.kb.start_run(app_package=self.kb.current_app_package)
+
         _consecutive_crash_detections = 0  # Prevent infinite crash-recovery loops
+        _archetype_detected = False        # Detect app archetype once mid-run
+        _directive_refresh_interval = 20   # Re-issue Planner directive every N steps
 
         try:
+            # ── Generate initial Planner directive (session-level strategy) ──
+            try:
+                init_ctx = self.navigator.get_ui_context("directive_init")
+                init_elements = {
+                    "accessibility_ids": init_ctx["accessibility_ids"],
+                    "resource_ids": init_ctx["resource_ids"],
+                    "clickable_texts": init_ctx["clickable_texts"],
+                }
+                directive = self.planner.generate_exploration_directive(
+                    self.memory, init_elements,
+                )
+                self.explorer.set_directive(directive)
+            except Exception as e:
+                logger.warning("Could not generate initial directive: %s", e)
+
             for step_num in range(max_steps):
+                # ── Check for API stop request ──
+                if self._stop_requested:
+                    logger.info("Stop requested via API -- halting explorer.")
+                    break
+
+                self._report_progress(step_num + 1, max_steps)
                 logger.info("--- Explorer step %d/%d ---", step_num + 1, max_steps)
 
                 # ------ Session health check (restart if UiAutomator2 crashed) ------
@@ -774,6 +1002,10 @@ class OrchestratorAgent:
 
                 self.memory.record_screen(
                     ui_ctx["state_signature"], ui_ctx["accessibility_ids"]
+                )
+                self.kb.record_screen(
+                    ui_ctx["state_signature"], ui_ctx["accessibility_ids"],
+                    screenshot=ui_ctx.get("screenshot_path", ""),
                 )
 
                 # Cache screen sources for end-of-session audits
@@ -841,6 +1073,37 @@ class OrchestratorAgent:
                         screen_name=ui_ctx.get("state_signature", ""),
                     )
 
+                # ------ App archetype detection (once, after 10 screens) ------
+                if not _archetype_detected and len(self.memory.screens) >= 6:
+                    _archetype_detected = True
+                    try:
+                        archetype = self.kb.detect_app_archetype()
+                        predicted = archetype.get("predicted_screens", [])
+                        if predicted:
+                            logger.info(
+                                "Archetype predicts undiscovered screens: %s",
+                                predicted,
+                            )
+                    except Exception as e:
+                        logger.debug("Archetype detection failed: %s", e)
+
+                # ------ Refresh Planner directive periodically ------
+                if step_num > 0 and step_num % _directive_refresh_interval == 0:
+                    try:
+                        dir_ctx = self.navigator.get_ui_context(f"directive_{step_num}")
+                        dir_elems = {
+                            "accessibility_ids": dir_ctx["accessibility_ids"],
+                            "resource_ids": dir_ctx["resource_ids"],
+                            "clickable_texts": dir_ctx["clickable_texts"],
+                        }
+                        directive = self.planner.generate_exploration_directive(
+                            self.memory, dir_elems,
+                        )
+                        self.explorer.set_directive(directive)
+                        logger.info("Refreshed exploration directive at step %d", step_num)
+                    except Exception as e:
+                        logger.debug("Directive refresh failed: %s", e)
+
                 # ------ Security: check for data leaks ------
                 self.security.check_sensitive_data(
                     ui_ctx.get("page_source", ""),
@@ -871,37 +1134,55 @@ class OrchestratorAgent:
 
                 # ------ Execute action directly (bypass LLM) ------
                 sig_before = ui_ctx.get("state_signature", "")
-                result = self.navigator.execute_action_direct(action, ui_ctx)
-                self.explorer.record_action_taken(action)
+                if self.engine:
+                    result = self.engine.execute_explorer_action(action, ui_ctx)
+                else:
+                    result = self.navigator.execute_action_direct(action, ui_ctx)
+                    self.explorer.record_action_taken(action)
 
                 # Record transition in the screen graph
                 sig_after = result.get("state_signature_after", "")
+
+                # ---- Learn what this element does (persist to KB) ----
+                self.explorer.observe_action_result(action, sig_before, sig_after)
+
                 if sig_before and sig_after and sig_before != sig_after:
                     action_desc = action.get("locator_value") or action_type
                     self.memory.record_transition(sig_before, action_desc, sig_after)
+                    self.kb.record_transition(sig_before, action_desc, sig_after)
 
                     # New screen discovered -- replan!
                     try:
-                        new_ctx = self.navigator.get_ui_context(
-                            f"explore_{step_num:04d}_newscreen"
+                        post_ctx = {
+                            "page_source": result.get("post_page_source", ""),
+                            "screenshot_path": result.get("post_screenshot_path", ""),
+                            "accessibility_ids": result.get("post_accessibility_ids", []),
+                            "resource_ids": result.get("post_resource_ids", []),
+                            "clickable_texts": result.get("post_clickable_texts", []),
+                            "state_signature": sig_after,
+                        }
+                        self.explorer.plan_for_new_screen(post_ctx, self.memory)
+                        self.kb.record_screen(
+                            sig_after, post_ctx.get("accessibility_ids", []),
+                            screenshot=post_ctx.get("screenshot_path", ""),
                         )
-                        self.explorer.plan_for_new_screen(new_ctx, self.memory)
                         # Cache new screen sources for audit phase
                         if sig_after not in self._screen_sources:
                             self._screen_sources[sig_after] = (
-                                new_ctx.get("page_source", ""),
-                                new_ctx.get("screenshot_path"),
+                                post_ctx.get("page_source", ""),
+                                post_ctx.get("screenshot_path"),
                             )
                     except Exception as e:
                         logger.debug("Could not plan for new screen: %s", e)
 
-                self.memory.log_action({
-                    "action": action_type,
-                    "locator": action.get("locator_value"),
-                    "success": result.get("success"),
-                    "description": result.get("description"),
-                    "screen_sig": sig_before,
-                })
+                if not self.engine:
+                    self.memory.log_action({
+                        "action": action_type,
+                        "locator": action.get("locator_value"),
+                        "success": result.get("success"),
+                        "description": result.get("description"),
+                        "screen_sig": sig_before,
+                    })
 
                 if result.get("bug_report"):
                     self._record_bug_simple(result)
@@ -919,6 +1200,7 @@ class OrchestratorAgent:
             logger.critical("Explorer error: %s", e, exc_info=True)
         finally:
             self._run_parallel_audits()
+            self.kb.end_run()
             report_path = self._save_report()
             self._generate_md_report()
             self._teardown()
@@ -957,6 +1239,12 @@ class OrchestratorAgent:
             detected_at=datetime.utcnow().isoformat() + "Z",
         )
         self.memory.add_bug(bug_entry)
+        self.kb.record_bug(
+            bug_id, desc,
+            screenshot=bug_entry.screenshot or "",
+            screen_signature=bug_entry.screen_signature or "",
+            severity=severity,
+        )
 
     def _record_bug_simple(self, result: Dict[str, Any]):
         """Record a bug without task/step context (explorer mode)."""
@@ -982,6 +1270,11 @@ class OrchestratorAgent:
             detected_at=datetime.utcnow().isoformat() + "Z",
         )
         self.memory.add_bug(bug_entry)
+        self.kb.record_bug(
+            bug_id, bug_desc,
+            screenshot=bug_entry.screenshot or "",
+            screen_signature=bug_entry.screen_signature or "",
+        )
 
     # ════════════════════════════════════════════════════════════════
     #  Smart Test mode  --  doc-driven, script-generating, memory-persistent
@@ -1112,13 +1405,65 @@ class OrchestratorAgent:
         features = self.doc_ingestion.enrich_features_with_ui(features, ui_elements)
 
         # Store in KB
-        self.kb.store_app_documentation(doc_text, features)
+        self.kb.store_app_documentation(doc_text, features, docs_path=docs_path)
         for feat in features:
             feat.setdefault("id", f"feat_{len(self.kb.get_all_features()) + 1}")
             self.kb.add_feature(feat)
             logger.info("Feature registered: [%s] %s", feat.get("priority", "?"), feat.get("name", "?"))
 
         logger.info("Phase 1 complete: %d features registered", len(features))
+
+        # Decompose complex features into subtask hierarchies
+        # immediately, so the execution phase has a detailed tree.
+        self._smart_decompose_feature_tasks(features, ui_elements, doc_text)
+
+    def _smart_decompose_feature_tasks(
+        self,
+        features: List[Dict[str, Any]],
+        ui_elements: Dict[str, List[str]],
+        doc_text: str,
+    ):
+        """Decompose each feature into a hierarchical subtask tree.
+
+        Creates a TestPlan from the feature list, then runs the Planner's
+        multi-level decomposition on it.  This way the execution phase gets
+        a fully expanded task tree instead of flat one-shot steps.
+        """
+        from ..session_memory import TestGoal, TestTask, TestStep, TestPlan
+        goals = []
+        for feat in features:
+            # Build a task per feature, with verification hints as steps
+            steps = [
+                TestStep(id=f"{feat.get('id', 'f')}_s{i}", description=hint)
+                for i, hint in enumerate(feat.get("verification_hints", []))
+            ]
+            task = TestTask(
+                id=feat.get("id", ""),
+                name=feat.get("name", ""),
+                description=feat.get("description", ""),
+                priority=feat.get("priority", "medium"),
+                steps=steps,
+                doc_context=feat.get("description", ""),
+            )
+            goal = TestGoal(
+                id=f"goal_{feat.get('id', '')}", name=feat.get("name", ""),
+                description=feat.get("description", ""), tasks=[task],
+            )
+            goals.append(goal)
+
+        if not goals:
+            return
+
+        plan = TestPlan(goals=goals, created_at=datetime.utcnow().isoformat() + "Z")
+
+        self.planner.decompose_plan(plan, ui_elements, doc_context=doc_text, kb=self.kb)
+
+        self.memory.set_plan(plan)
+        summary = plan.summary()
+        logger.info(
+            "Smart-test plan: %d goals, %d tasks (depth %d), %d steps",
+            summary['goals'], summary['tasks'], summary.get('max_depth', 0), summary['steps'],
+        )
 
     def _smart_phase_test_features(self, max_steps: int):
         """Phase 2: Generate scripts and test each feature."""

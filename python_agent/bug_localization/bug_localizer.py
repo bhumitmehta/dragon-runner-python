@@ -315,6 +315,10 @@ class BugLocalizer:
         """
         Localize a bug by scanning a directory for source files.
         
+        Uses ``collect_source_files`` to automatically skip node_modules,
+        build outputs, and other non-source directories — matching Ladybug's
+        filter_files() behaviour.
+        
         Args:
             bug_report: Bug report text or file path
             source_dir: Directory containing source code
@@ -326,27 +330,17 @@ class BugLocalizer:
         Returns:
             List of LocalizationResult objects
         """
+        from .integration import collect_source_files
+
         # Default extensions for mobile apps
         if file_extensions is None:
             file_extensions = ['.java', '.kt', '.py', '.js', '.ts', '.tsx', '.jsx']
             
-        # Collect source files
-        source_files = []
-        source_path = Path(source_dir)
-        
-        for ext in file_extensions:
-            for file_path in source_path.rglob(f"*{ext}"):
-                if file_path.is_file():
-                    try:
-                        with open(file_path, 'r', encoding='utf-8') as f:
-                            content = f.read()
-                        source_files.append((str(file_path), file_path.name, content))
-                    except Exception as e:
-                        if verbose:
-                            print(f"Error reading {file_path}: {e}")
+        # Collect source files using smart filter (skips node_modules etc.)
+        source_files = collect_source_files(source_dir, file_extensions)
                             
         if verbose:
-            print(f"Found {len(source_files)} source files")
+            print(f"Found {len(source_files)} source files (after filtering)")
             
         return self.localize_bug(
             bug_report, source_files, trace_data, top_n, verbose

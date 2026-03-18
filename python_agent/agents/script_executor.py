@@ -21,6 +21,8 @@ from ..ui_extract import (
     extract_clickable_resource_ids,
     extract_clickable_texts,
     extract_all_interactive_elements,
+    extract_visible_texts_ordered,
+    extract_labelled_data_items,
 )
 from ..memory import state_signature_from_xml
 
@@ -417,22 +419,52 @@ class ScriptExecutorAgent(BaseAgent):
         acc_ids: List[str],
         texts: List[str],
     ) -> Dict[str, Any]:
-        """Use LLM to evaluate an ordering assertion."""
+        """Use LLM to evaluate an ordering assertion.
+
+        Extracts structured data items (product names, prices) AND raw
+        visible text in display order so the LLM can properly verify
+        sort order, ascending/descending checks, etc.
+        """
         description = assertion.get("description", "")
         expected = assertion.get("expected", "")
 
-        # Extract all visible text items for the LLM to evaluate
-        prompt = f"""Evaluate whether the following UI elements are in the correct order.
+        # Extract structured data items (e.g. product name + price)
+        data_items = extract_labelled_data_items(page_source)
+        data_items_str = json.dumps(data_items[:20], indent=2) if data_items else "(none found)"
+
+        # Extract ALL visible text in display order (by Y coordinate)
+        visible = extract_visible_texts_ordered(page_source)
+        # Compact: just the text values in screen order
+        visible_texts = []
+        for v in visible[:50]:
+            label = v.get("text") or v.get("content_desc", "")
+            if label and len(label) <= 60:
+                visible_texts.append(label)
+
+        prompt = f"""Evaluate whether the data on this screen satisfies the expected ordering.
 
 EXPECTED ORDER: {expected}
 ASSERTION: {description}
 
-VISIBLE ELEMENTS (in display order):
-Accessibility IDs: {json.dumps(acc_ids[:30])}
-Visible Texts: {json.dumps(texts[:30])}
+STRUCTURED DATA ITEMS (extracted from screen, in display order):
+{data_items_str}
+
+ALL VISIBLE TEXT (in top-to-bottom display order):
+{json.dumps(visible_texts[:40])}
+
+ACCESSIBILITY IDS: {json.dumps(acc_ids[:20])}
+
+INSTRUCTIONS:
+- For "ascending by price": check that the price values increase top-to-bottom.
+- For "descending by price": check that prices decrease top-to-bottom.
+- For "ascending by name": check alphabetical A-Z order of item names.
+- For "descending by name": check reverse alphabetical Z-A order.
+- Use the STRUCTURED DATA ITEMS preferably; fall back to visible text if needed.
+- If there are fewer than 2 data items, the assertion cannot be properly evaluated;
+  return passed=false with a reason explaining insufficient data.
 
 Answer with a JSON object:
-{{"passed": true/false, "reason": "<explanation>"}}
+{{"passed": true/false, "reason": "<brief explanation with the actual values>"}}
 
 Only return the JSON, no explanation.
 """

@@ -1,0 +1,34 @@
+Demo-App Features
+
+Bug Mode Toggle
+
+Switch to enable/disable intentional bugs for testing automation and AI agents.
+Home Screen
+
+Navigation to Login/Profile, Products, Cart, Calculator, and Contact Form screens.
+Login/Profile
+
+Login form with username and password.
+Bug Mode: Accepts any password, always shows success.
+Profile view after login, with logout option.
+Products Screen
+
+List of products (Laptop, Phone, Headphones, Tablet).
+Select quantity and add products to cart.
+Bug Mode: Shows wrong quantity, displays incorrect prices (10% lower).
+Shopping Cart 
+
+View cart items, remove items, see total price.
+Checkout with confirmation modal.
+Bug Mode: Overcharges total by 50%, removes wrong item, checkout skips confirmation.
+Calculator
+
+Simple calculator for addition, subtraction, multiplication, division.
+Bug Mode: Incorrect calculations (adds/subtracts extra, doubles/halves result).
+Contact Form
+
+Email and message input, submit button.
+Bug Mode: Accepts any email format, skips validation, always shows success.
+Accessibility
+
+All UI elements have stable accessibilityLabel identifiers for reliable automation.

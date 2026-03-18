@@ -1,25 +1,43 @@
 """
 Bug Localization Module for the AI Agent
 
-This module implements bug localization functionality inspired by the Ladybug project.
-It uses the UniXcoder model for semantic code understanding and bug report analysis.
+Implements bug localization following the Ladybug architecture:
+
+1. **Index** source files from the app-under-test directory
+   (node_modules / build / generated artefacts are excluded automatically).
+2. **Preprocess** source code and bug reports with language-aware stop-word
+   removal (Java, JS/TS, Kotlin).
+3. **Embed** using the UniXcoder model (Microsoft's code-understanding model).
+4. **Rank** files by cosine similarity between bug-report embeddings and
+   source-file embeddings.
+5. **Boost** files that match GUI Screen (GS) terms extracted from the
+   Appium execution trace.
 
 Key Components:
 - BugLocalizer: Main class for ranking files by bug likelihood
-- UnixCoder: Microsoft's code understanding model wrapper
-- Preprocessor: Text preprocessing for bug reports and source code
-- GUIDataExtractor: Extracts screen component and GUI screen terms from execution traces
+- UniXcoder: Microsoft's code understanding model wrapper
+- Preprocessor: Language-aware text preprocessing for bug reports and source code
+- GUIDataExtractor: Extracts SC/GS terms from both Ladybug and Appium traces
 - BugLocalizationIntegration: Integration layer for the AI Agent
+- collect_source_files: Smart directory walker that skips node_modules etc.
 """
 
 # Lightweight imports that don't need torch
-from .preprocessor import Preprocessor, preprocess_bug_report, preprocess_source_code
+from .preprocessor import (
+    Preprocessor,
+    preprocess_bug_report,
+    preprocess_source_code,
+    SKIP_DIRS,
+    SKIP_FILE_PATTERNS,
+    LANGUAGE_STOP_WORDS,
+    DEFAULT_STOP_WORDS,
+)
 from .gui_data_extractor import (
     GUIDataExtractor, 
     extract_sc_terms, 
     extract_gs_terms,
     build_corpus,
-    get_boosted_files
+    get_boosted_files,
 )
 
 # Heavy imports that require torch - degrade gracefully when unavailable
@@ -37,7 +55,8 @@ except ImportError:
 from .integration import (
     BugLocalizationIntegration,
     create_bug_report_from_detection,
-    get_integration
+    get_integration,
+    collect_source_files,
 )
 
 __all__ = [
@@ -50,6 +69,7 @@ __all__ = [
     # Integration
     'BugLocalizationIntegration',
     'get_integration',
+    'collect_source_files',
     # Functions
     'format_results',
     'preprocess_bug_report',
@@ -59,5 +79,11 @@ __all__ = [
     'build_corpus',
     'get_boosted_files',
     'create_bug_report_from_detection',
+    # Constants
+    'SKIP_DIRS',
+    'SKIP_FILE_PATTERNS',
+    'LANGUAGE_STOP_WORDS',
+    'DEFAULT_STOP_WORDS',
+    'TORCH_AVAILABLE',
 ]
 

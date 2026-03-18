@@ -120,7 +120,16 @@ class NavigatorAgent(BaseAgent):
         # Capture post-action state
         time.sleep(0.5)
         post_source = self.controller.get_page_source() or ""
+        post_screenshot = self.controller.take_screenshot(f"post_{ui_context.get('state_signature', 'unknown')}.png")
+        post_acc_ids = extract_clickable_accessibility_ids(post_source)
+        post_res_ids = extract_clickable_resource_ids(post_source)
+        post_texts = extract_clickable_texts(post_source)
         result["state_signature_after"] = state_signature_from_xml(post_source)
+        result["post_screenshot_path"] = post_screenshot
+        result["post_accessibility_ids"] = post_acc_ids
+        result["post_resource_ids"] = post_res_ids
+        result["post_clickable_texts"] = post_texts
+        result["post_page_source"] = post_source
         result["state_signature_before"] = ui_context.get("state_signature")
         return result
 
@@ -156,7 +165,7 @@ RULES:
 2. If the step cannot be executed (element not found), return action "skip" with a reason.
 3. For long press actions, use "long_press" action type.
 4. If you need to scroll to find an element, use "scroll" with direction first.
-5. For text input, always specify both locator_value AND text.
+5. For text input, always specify both locator_value AND text. Generate realistic test data appropriate for the field type (e.g., valid email for email fields, phone numbers for phone fields, names for name fields, addresses for address fields).
 
 Return ONLY valid JSON (no markdown):
 {{

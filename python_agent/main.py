@@ -6,6 +6,7 @@ import argparse
 # from .ai_tester import AITester
 from .agents.orchestrator import OrchestratorAgent
 from .logging_config import get_logger
+from . import config
 
 logger = get_logger("main")
 
@@ -114,8 +115,45 @@ Examples:
         help="Path to a session JSON file to resume a crashed/interrupted multi-agent session",
         default=None,
     )
+    parser.add_argument(
+        "--app",
+        help=(
+            "Select a pre-configured application profile to test. "
+            "Available profiles: " + ", ".join(config.APP_PROFILES.keys())
+        ),
+        default=None,
+    )
+    parser.add_argument(
+        "--list-apps",
+        action="store_true",
+        help="List all available app profiles and exit",
+    )
 
     args = parser.parse_args(argv)
+
+    # ── List apps and exit ───────────────────────────────────────────
+    if args.list_apps:
+        print("\nAvailable app profiles:\n")
+        for name, profile in config.APP_PROFILES.items():
+            desc = profile.get("description", "")
+            pkg = profile.get("app_package", "")
+            src = profile.get("source_code_dir", "")
+            print(f"  {name}")
+            if desc:
+                print(f"    Description : {desc}")
+            print(f"    Package     : {pkg}")
+            print(f"    Source dir  : {src}")
+            print()
+        return
+
+    # ── Apply app profile ────────────────────────────────────────────
+    if args.app:
+        try:
+            config.apply_app_profile(args.app)
+            logger.info("Using app profile: %s (%s)", args.app, config.APP_PACKAGE)
+        except ValueError as exc:
+            logger.error(str(exc))
+            return
 
     # Common kwargs for bug localization
     _loc_kwargs = {}
@@ -242,7 +280,6 @@ Examples:
             scenarios = tester.generate_tests()
             if scenarios:
                 import json
-                from . import config
                 config.REPORTS_DIR.mkdir(parents=True, exist_ok=True)
                 out_file = config.REPORTS_DIR / "generated_tests.json"
                 out_file.write_text(json.dumps({
@@ -265,6 +302,61 @@ Examples:
     except Exception as e:
         logger.error("Agent execution error: %s", e, exc_info=True)
     logger.info("Agent has finished its run.")
+
+
+def _run_agent_core(
+    *,
+    mode: str = "task",
+    task: str = "",
+    max_steps: int = 30,
+    explorer: bool = False,
+    vision: bool = False,
+    status_callback=None,
+    kb=None,
+) -> None:
+    """
+    Execute an agent run programmatically (called from the REST API).
+
+    Parameters
+    ----------
+    mode : str
+        "task" | "explore" | "interactive"
+    task : str
+        Natural language instruction (required when mode="task").
+    max_steps : int
+        Maximum UI interaction steps.
+    explorer : bool
+        Use the Explorer agent for curiosity-driven exploration.
+    vision : bool
+        Enable vision-based visual checks.
+    status_callback : callable | None
+        If provided, called with ``{"current_step": n, ...}`` dicts
+        so the API can push live progress to the frontend.
+    kb : KnowledgeBase | None
+        If provided, the agent shares this KB instance with the API
+        so frontend reads see live updates.
+    """
+    from .agents.orchestrator import OrchestratorAgent
+
+    orch = OrchestratorAgent(kb=kb)
+
+    # Inject the status callback so orchestrator can report progress
+    if status_callback is not None:
+        orch._api_status_callback = status_callback
+
+    if mode == "explore" or explorer:
+        logger.info("[API] Starting explorer-driven autonomous exploration, max_steps=%d", max_steps)
+        orch.run_explore_with_explorer(max_steps=max_steps)
+    elif mode == "task" and task:
+        logger.info("[API] Starting multi-agent task: %s", task[:80])
+        orch.run_task(task, max_steps=max_steps)
+    elif mode == "interactive":
+        logger.info("[API] Interactive mode not supported via API")
+        raise ValueError("Interactive mode is not supported through the REST API. Use the CLI instead.")
+    else:
+        # Default: explore
+        logger.info("[API] Starting multi-agent exploration, max_steps=%d", max_steps)
+        orch.run_explore(max_steps=max_steps)
 
 
 if __name__ == "__main__":
