@@ -36,6 +36,11 @@ from ..ui_extract import (
     extract_all_interactive_elements,
 )
 from ..memory import state_signature_from_xml
+from ..semantic_fingerprint import (
+    semantic_screen_fingerprint,
+    SemanticScreenRegistry,
+    are_screens_similar,
+)
 from ..session_memory import SessionMemory
 from ..ui_patterns import UIStructureAnalyzer, should_sample_list_items
 from ..feature_detector import FeatureDetector
@@ -178,6 +183,7 @@ class ExplorerAgent(BaseAgent):
         6. Escape (back/scroll) if everything tried
         """
         sig = ui_context.get("state_signature", "")
+        activity = ui_context.get("activity", "")
         self._screen_visit_count[sig] = self._screen_visit_count.get(sig, 0) + 1
         # Also use session memory's persistent visit count
         mem_visits = memory.get_screen_visit_count(sig)
@@ -410,14 +416,19 @@ class ExplorerAgent(BaseAgent):
             edge_key = (element_id, from_sig, to_sig)
             self._edge_visit_count[edge_key] = self._edge_visit_count.get(edge_key, 0) + 1
     
-    def analyze_new_screen_containers(self, screen_sig: str, screen_source: str, description: str = ""):
+    def analyze_new_screen_containers(self, screen_sig: str, screen_source: str, description: str = "", activity: str = ""):
         """Analyze and classify containers in a newly discovered screen.
         
         Phase 2 (behavioral classification) + Phase 3 (structural hinting).
         
         This is called once per screen + helps decide sampling strategy.
+        Uses semantic fingerprinting for robust screen identity.
         """
         try:
+            # Compute semantic fingerprint for robust screen identity
+            semantic_fp = semantic_screen_fingerprint(screen_source, activity)
+            logger.debug(f"Screen {screen_sig[:12]} semantic fingerprint: {semantic_fp['semantic_hash'][:12]}")
+            
             # Register with template system for future "same screen, different hash" detection
             if self.screen_template_registry:
                 template_sig = self.screen_template_registry.register_screen(
@@ -434,15 +445,28 @@ class ExplorerAgent(BaseAgent):
         except Exception as e:
             logger.debug(f"Container analysis failed for {screen_sig[:12]}: {e}")
     
-    def get_normalized_visit_count(self, screen_sig: str, session_memory: SessionMemory) -> int:
+    def get_normalized_visit_count(self, screen_sig: str, session_memory: SessionMemory, page_source: str = "", activity: str = "") -> int:
         """Get visit count for a screen, accounting for template variations.
         
+        Uses semantic fingerprinting to detect content variations of the same screen.
         If screen is part of a template (e.g., multiple ProductDetail pages),
         return the aggregate template count rather than just this screen's visits.
         
         This prevents "I visited 3 different product pages" from counting as
         discovering 3 new screens when they're all ProductDetailTemplate.
         """
+        # First check semantic similarity with existing screens
+        if page_source and activity:
+            current_fp = semantic_screen_fingerprint(page_source, activity)
+            for known_sig in session_memory.screens:
+                # Get stored fingerprint from session memory if available
+                known_screen = session_memory.screens.get(known_sig, {})
+                known_fp = known_screen.get("semantic_fingerprint")
+                if known_fp and are_screens_similar(current_fp, known_fp):
+                    # Return combined visit count for similar screens
+                    return session_memory.get_screen_visit_count(known_sig)
+        
+        # Check template registry
         if self.screen_template_registry:
             template = self.screen_template_registry.get_template_for_screen(screen_sig)
             if template:
@@ -612,8 +636,14 @@ If no visual bugs found, return: []"""
             known_targets = self._element_target_screens.get(element_id, set())
             target_bonus = 0.0
             for target_sig in known_targets:
-                # Use template-normalized visit count (handles content list variations)
-                target_visits = self.get_normalized_visit_count(target_sig, memory)
+                # Use semantic fingerprinting for robust visit counting
+                # This handles content list variations (e.g., scrolled product lists)
+                target_screen = memory.screens.get(target_sig, {})
+                target_page_source = target_screen.get("page_source", "")
+                target_activity = target_screen.get("activity", "")
+                target_visits = self.get_normalized_visit_count(
+                    target_sig, memory, target_page_source, target_activity
+                )
                 if target_visits <= 2:  # Very undervisited
                     target_bonus += 0.4
                 elif target_visits <= 5:  # Moderately undervisited
@@ -1157,10 +1187,35 @@ Return ONLY JSON:
         1. Loaded from the KnowledgeBase (learned from previous runs)
         2. Classified semantically by the LLM for any new/unknown elements
         3. Saved back to KB so future runs benefit without re-classification
+        
+        Uses semantic fingerprinting to detect if this is truly a new screen
+        or just a content variation (scrolled list, modal, etc.) of a known screen.
         """
         sig = ui_context.get("state_signature", "")
+        activity = ui_context.get("activity", "")
+        page_source = ui_context.get("page_source", "")
+        
         if not sig or sig in self._screen_plans:
             return  # already planned
+        
+        # Check if this is actually a new screen or just a content variation
+        # using semantic fingerprinting
+        if page_source and activity:
+            current_fp = semantic_screen_fingerprint(page_source, activity)
+            for known_sig in memory.screens:
+                known_screen = memory.screens.get(known_sig, {})
+                known_fp = known_screen.get("semantic_fingerprint")
+                if known_fp and are_screens_similar(current_fp, known_fp):
+                    # This is a content variation, not a new screen
+                    logger.info(
+                        "Screen %s is semantic variation of %s -- using existing plan",
+                        sig[:12], known_sig[:12]
+                    )
+                    # Copy the plan from the known screen
+                    if known_sig in self._screen_plans:
+                        self._screen_plans[sig] = self._screen_plans[known_sig].copy()
+                        self._screen_plan_index[sig] = 0
+                    return
 
         acc_ids = ui_context.get("accessibility_ids", [])
         res_ids = ui_context.get("resource_ids", [])

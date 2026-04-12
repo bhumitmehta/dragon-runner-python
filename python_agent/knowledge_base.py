@@ -247,7 +247,8 @@ class KnowledgeBase:
     def record_screen(self, sig: str, elements: List[str], *,
                       input_fields: Optional[List[str]] = None,
                       name: str = "",
-                      screenshot: str = "") -> bool:
+                      screenshot: str = "",
+                      description: str = "") -> bool:
         """Record a screen visit. Returns True if NEW screen."""
         Screen = Query()
         now = datetime.utcnow().isoformat() + "Z"
@@ -261,6 +262,7 @@ class KnowledgeBase:
                 "first_seen": now, "last_seen": now,
                 "visit_count": 1, "transitions": {}, "tags": [],
                 "app_package": self.current_app_package,
+                "description": description,
             }
             if screenshot:
                 doc["screenshot"] = screenshot
@@ -271,7 +273,8 @@ class KnowledgeBase:
             # Keep in-memory graph in sync
             self.graph.add_screen(sig, name=name, elements=elements[:60],
                                   input_fields=input_fields or [],
-                                  screenshot=screenshot)
+                                  screenshot=screenshot,
+                                  description=description)
             return True
         else:
             doc = existing[0]
@@ -286,12 +289,15 @@ class KnowledgeBase:
                 updates["name"] = name
             if screenshot:
                 updates["screenshot"] = screenshot
+            if description:
+                updates["description"] = description
             self.screens.update(updates, Screen.signature == sig)
             self.flush()
             # Keep in-memory graph in sync
             self.graph.add_screen(sig, name=name, elements=elements[:60],
                                   input_fields=input_fields or [],
-                                  screenshot=screenshot)
+                                  screenshot=screenshot,
+                                  description=description or doc.get("description", ""))
             return False
 
     def record_transition(self, from_sig: str, action_desc: str, to_sig: str):

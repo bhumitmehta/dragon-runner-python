@@ -28,6 +28,10 @@ VISION_CLOUD_MODELS = [
 TEXT_CLOUD_MODELS = [
     "gpt-oss:120b-cloud",
 ]
+# Default single model to use (set to None to use parallel mode)
+DEFAULT_TEXT_MODEL = "gpt-oss:120b-cloud"
+DEFAULT_VISION_MODEL = "qwen3-vl:235b-cloud"
+
 # Legacy alias kept for _ollama_generate default
 PARALLEL_CLOUD_MODELS = TEXT_CLOUD_MODELS
 
@@ -96,14 +100,7 @@ def get_vlm_cache() -> VLMCache:
 _SCREEN_ANALYSIS_PROMPT = """Analyse this mobile app screenshot in detail.
 
 Describe:
-1. **Screen type** (e.g. login, product catalog, cart, menu drawer, modal/popup, settings, checkout, etc.)
-2. **Layout** (header, body sections, footer, any overlays or modals)
-3. **All visible interactive elements**  --  buttons, text fields, toggles, links, icons  --  with their approximate positions (top/middle/bottom, left/centre/right)
-4. **Key text content** visible on screen (headings, labels, prices, messages)
-5. **Visual state**  --  colours, theme (light/dark), any highlights or selections
-6. **Popups/modals/overlays**  --  describe any that are present and what is behind them
-7. **Potential visual issues**  --  overlapping text, broken layout, missing images, contrast problems
-
+features the screen has , what actions can be performed , give the answer in plain text format
 Be concise but thorough. This description will be reused for multiple subsequent reasoning steps about this screen."""
 
 
@@ -214,11 +211,27 @@ def _ollama_generate_model(prompt: str, model: str, *, images: list[str] | None 
 
 def _ollama_generate(prompt: str, *, images: list[str] | None = None) -> str:
     """
+    Call Ollama /api/generate using a single model.
+    Uses DEFAULT_TEXT_MODEL for text-only requests.
+    """
+    model = DEFAULT_TEXT_MODEL
+    if not model:
+        # Fallback to parallel mode if no default set
+        models_to_try = list(PARALLEL_CLOUD_MODELS)
+        return _ollama_generate_parallel(prompt, images=images, models_to_try=models_to_try)
+
+    # Use single model with timeout
+    timeout = 60 if model.endswith("-cloud") else 180
+    return _ollama_generate_model(prompt, model, images=images, timeout=timeout)
+
+
+def _ollama_generate_parallel(prompt: str, *, images: list[str] | None = None, models_to_try: list[str] | None = None) -> str:
+    """
     Call Ollama /api/generate  --  tries ALL available models in parallel
     (cloud models like gpt-oss, kimi + local llama3) and returns the
     first successful response.
     """
-    models_to_try = list(PARALLEL_CLOUD_MODELS)
+    models_to_try = models_to_try or list(PARALLEL_CLOUD_MODELS)
 
     with ThreadPoolExecutor(max_workers=len(models_to_try)) as executor:
         futures = {}
@@ -285,10 +298,10 @@ def _call_with_retry(func, *args, **kwargs):
 
 def get_vlm_response(image_path, prompt):
     """
-    Gets a response from a vision-language model.
+    Gets a response from a vision-language model using a single model.
 
-    Races Google Gemini against Ollama cloud models (gpt-oss, kimi) in parallel.
-    Falls back to local Ollama (llama3) if all cloud models fail.
+    Uses DEFAULT_VISION_MODEL for vision requests.
+    Falls back to local Ollama if cloud model fails.
 
     Args:
         image_path (str): The path to the image file.
@@ -299,11 +312,26 @@ def get_vlm_response(image_path, prompt):
     """
     global _gemini_disabled_this_session
 
-    providers = {}  # future -> provider_name
+    # ── Try single Ollama vision model ─────────────────────────────
+    if config.OLLAMA_FALLBACK and DEFAULT_VISION_MODEL:
+        img_b64 = _image_to_base64(image_path) if image_path else None
+        if img_b64:
+            logger.info("VLM: sending screenshot (%s) to vision model '%s'", image_path, DEFAULT_VISION_MODEL)
+        else:
+            logger.warning("VLM: no image_path  --  falling back to text-only for 'vision' call")
 
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        # ── Submit Gemini (unless disabled) ───────────────────────────
-        if config.VLM_ENABLED and config.GOOGLE_API_KEY and not _gemini_disabled_this_session:
+        try:
+            images = [img_b64] if img_b64 else None
+            result = _ollama_generate_model(prompt, DEFAULT_VISION_MODEL, images=images, timeout=120)
+            if result and result.strip():
+                logger.info("VLM response from '%s'", DEFAULT_VISION_MODEL)
+                return result
+        except Exception as e:
+            logger.warning("VLM model '%s' failed: %s", DEFAULT_VISION_MODEL, str(e)[:80])
+
+    # ── Fallback: try Gemini if enabled ───────────────────────────
+    if config.VLM_ENABLED and config.GOOGLE_API_KEY and not _gemini_disabled_this_session:
+        try:
             def _gemini_vlm():
                 client = genai.Client(api_key=config.GOOGLE_API_KEY)
                 img = Image.open(image_path)
@@ -312,52 +340,26 @@ def get_vlm_response(image_path, prompt):
                     contents=[prompt, img],
                 )
                 return response.text
-            fut = executor.submit(_call_with_retry, _gemini_vlm)
-            providers[fut] = "gemini"
-
-        # ── Submit Ollama vision models in parallel ───────────────────
-        if config.OLLAMA_FALLBACK:
-            img_b64 = _image_to_base64(image_path) if image_path else None
-            if img_b64:
-                logger.info("VLM: sending screenshot (%s) to vision model(s)", image_path)
-            else:
-                logger.warning("VLM: no image_path  --  falling back to text-only for 'vision' call")
-            models = VISION_CLOUD_MODELS if img_b64 else TEXT_CLOUD_MODELS
-            for model in models:
-                def _cloud_vlm(m=model, img=img_b64):
-                    images = [img] if img else None
-                    return _ollama_generate_model(prompt, m, images=images, timeout=120)
-                fut = executor.submit(_cloud_vlm)
-                providers[fut] = f"ollama:{model}"
-
-        # ── Race: return first successful response ────────────────────
-        for fut in as_completed(providers):
-            name = providers[fut]
-            try:
-                result = fut.result()
-                if result and result.strip():
-                    logger.info("VLM response from '%s' (first to finish)", name)
-                    # Cancel remaining
-                    for other in providers:
-                        if other is not fut:
-                            other.cancel()
-                    return result
-            except Exception as e:
-                msg = str(e).lower()
-                if name == "gemini" and ("429" in msg or "quota" in msg or "rate" in msg):
-                    logger.warning("Gemini quota exceeded  --  disabling for this session.")
-                    _gemini_disabled_this_session = True
-                logger.debug("VLM provider '%s' failed: %s", name, str(e)[:80])
+            result = _call_with_retry(_gemini_vlm)
+            if result and result.strip():
+                logger.info("VLM response from 'gemini'")
+                return result
+        except Exception as e:
+            msg = str(e).lower()
+            if "429" in msg or "quota" in msg or "rate" in msg:
+                logger.warning("Gemini quota exceeded  --  disabling for this session.")
+                _gemini_disabled_this_session = True
+            logger.debug("VLM provider 'gemini' failed: %s", str(e)[:80])
 
     raise VLMUnavailable("All VLM providers failed")
 
 
 def get_text_response(prompt: str) -> str:
     """
-    Gets a text-only response from a language model (no image).
+    Gets a text-only response from a language model (no image) using a single model.
 
-    Races Google Gemini against Ollama cloud models (gpt-oss, kimi) in parallel.
-    Falls back to local Ollama (llama3) if all cloud models fail.
+    Uses DEFAULT_TEXT_MODEL for text requests.
+    Falls back to Gemini if cloud model fails.
 
     Args:
         prompt (str): The prompt to send to the model.
@@ -367,11 +369,19 @@ def get_text_response(prompt: str) -> str:
     """
     global _gemini_disabled_this_session
 
-    providers = {}
+    # ── Try single Ollama text model ──────────────────────────────
+    if config.OLLAMA_FALLBACK and DEFAULT_TEXT_MODEL:
+        try:
+            result = _ollama_generate_model(prompt, DEFAULT_TEXT_MODEL, timeout=60)
+            if result and result.strip():
+                logger.info("Text response from '%s'", DEFAULT_TEXT_MODEL)
+                return result
+        except Exception as e:
+            logger.warning("Text model '%s' failed: %s", DEFAULT_TEXT_MODEL, str(e)[:80])
 
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        # ── Submit Gemini ─────────────────────────────────────────────
-        if config.VLM_ENABLED and config.GOOGLE_API_KEY and not _gemini_disabled_this_session:
+    # ── Fallback: try Gemini if enabled ───────────────────────────
+    if config.VLM_ENABLED and config.GOOGLE_API_KEY and not _gemini_disabled_this_session:
+        try:
             def _gemini_text():
                 client = genai.Client(api_key=config.GOOGLE_API_KEY)
                 response = client.models.generate_content(
@@ -379,34 +389,16 @@ def get_text_response(prompt: str) -> str:
                     contents=[prompt],
                 )
                 return response.text
-            fut = executor.submit(_call_with_retry, _gemini_text)
-            providers[fut] = "gemini"
-
-        # ── Submit Ollama text models ──────────────────────────────────
-        if config.OLLAMA_FALLBACK:
-            for model in TEXT_CLOUD_MODELS:
-                def _cloud_text(m=model):
-                    return _ollama_generate_model(prompt, m, timeout=60)
-                fut = executor.submit(_cloud_text)
-                providers[fut] = f"ollama:{model}"
-
-        # ── Race ──────────────────────────────────────────────────────
-        for fut in as_completed(providers):
-            name = providers[fut]
-            try:
-                result = fut.result()
-                if result and result.strip():
-                    logger.info("Text response from '%s' (first to finish)", name)
-                    for other in providers:
-                        if other is not fut:
-                            other.cancel()
-                    return result
-            except Exception as e:
-                msg = str(e).lower()
-                if name == "gemini" and ("429" in msg or "quota" in msg or "rate" in msg):
-                    logger.warning("Gemini quota exceeded  --  disabling for this session.")
-                    _gemini_disabled_this_session = True
-                logger.debug("Text provider '%s' failed: %s", name, str(e)[:80])
+            result = _call_with_retry(_gemini_text)
+            if result and result.strip():
+                logger.info("Text response from 'gemini'")
+                return result
+        except Exception as e:
+            msg = str(e).lower()
+            if "429" in msg or "quota" in msg or "rate" in msg:
+                logger.warning("Gemini quota exceeded  --  disabling for this session.")
+                _gemini_disabled_this_session = True
+            logger.debug("Text provider 'gemini' failed: %s", str(e)[:80])
 
     raise VLMUnavailable("All text providers failed")
 

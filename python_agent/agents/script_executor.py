@@ -25,6 +25,7 @@ from ..ui_extract import (
     extract_labelled_data_items,
 )
 from ..memory import state_signature_from_xml
+from ..semantic_fingerprint import semantic_screen_fingerprint
 
 logger = get_logger("agents.script_executor")
 
@@ -89,7 +90,14 @@ class ScriptExecutorAgent(BaseAgent):
                 logger.debug("Nav step %d OK: %s", i + 1, step.get("description", "")[:60])
             time.sleep(0.5)
 
-        final_sig = state_signature_from_xml(self.controller.get_page_source() or "")
+        # Get activity for semantic fingerprinting
+        final_activity = ""
+        try:
+            final_activity = self.controller.get_current_activity() or ""
+        except Exception:
+            pass
+        
+        final_sig = state_signature_from_xml(self.controller.get_page_source() or "", final_activity)
         success = len(errors) == 0 or steps_executed > len(errors)
 
         return {
@@ -277,7 +285,15 @@ class ScriptExecutorAgent(BaseAgent):
         acc_ids = extract_clickable_accessibility_ids(page_source)
         res_ids = extract_clickable_resource_ids(page_source)
         texts = extract_clickable_texts(page_source)
-        sig = state_signature_from_xml(page_source)
+        
+        # Get activity for semantic fingerprinting
+        activity = ""
+        try:
+            activity = self.controller.get_current_activity() or ""
+        except Exception:
+            pass
+        
+        sig = state_signature_from_xml(page_source, activity)
         return {
             "page_source": page_source,
             "screenshot_path": screenshot,
@@ -285,6 +301,7 @@ class ScriptExecutorAgent(BaseAgent):
             "resource_ids": res_ids,
             "clickable_texts": texts,
             "state_signature": sig,
+            "activity": activity,
         }
 
     def _evaluate_assertion(

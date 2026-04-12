@@ -170,12 +170,12 @@ class ExecutionEngine:
 
     # ── Retry logic ──────────────────────────────────────────────────
 
-    def retry_step(self, step: TestStep, task: TestTask, max_retries: int) -> bool:
+    def retry_step(self, step: TestStep, task: TestTask, max_retries: int, ui_ctx: Dict[str, Any]) -> bool:
         """Retry a failed step up to ``max_retries`` times."""
         for attempt in range(max_retries):
             logger.debug("Retry %d/%d...", attempt + 1, max_retries)
             time.sleep(1.0)
-            result = self.execute_step(step, task)
+            result = self.execute_step(step, task, ui_ctx)
             if result["success"]:
                 self.memory.mark_step(step, TaskStatus.COMPLETED, result=result, retries=attempt + 1)
                 logger.info("Retry OK -- %s", result['description'])

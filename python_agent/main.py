@@ -131,19 +131,12 @@ Examples:
 
     args = parser.parse_args(argv)
 
-    # ── List apps and exit ───────────────────────────────────────────
-    if args.list_apps:
-        print("\nAvailable app profiles:\n")
-        for name, profile in config.APP_PROFILES.items():
-            desc = profile.get("description", "")
-            pkg = profile.get("app_package", "")
-            src = profile.get("source_code_dir", "")
-            print(f"  {name}")
-            if desc:
-                print(f"    Description : {desc}")
-            print(f"    Package     : {pkg}")
-            print(f"    Source dir  : {src}")
-            print()
+    # ── Require explicit app profile ────────────────────────────────
+    if not args.app and (not config.APP_PACKAGE or not config.APP_ACTIVITY):
+        logger.error("No app profile selected. Use --app <profile> or set APP_PROFILE env var. Available: %s", ", ".join(config.APP_PROFILES.keys()))
+        print("\nERROR: No app profile selected.\n\nPlease launch with --app <profile> or set APP_PROFILE env var.\nAvailable profiles:")
+        for name in config.APP_PROFILES:
+            print(f"  - {name}")
         return
 
     # ── Apply app profile ────────────────────────────────────────────

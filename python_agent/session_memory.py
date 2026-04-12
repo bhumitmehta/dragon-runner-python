@@ -224,6 +224,9 @@ class ScreenNode:
     visit_count: int = 1
     elements_snapshot: List[str] = field(default_factory=list)
     transitions: Dict[str, str] = field(default_factory=dict)  # action_desc → target_sig
+    semantic_fingerprint: Optional[Dict[str, Any]] = None  # semantic fingerprint for robust identity
+    activity: str = ""  # Android activity name
+    page_source: str = ""  # XML snapshot for similarity comparison
 
 
 # ────────────────────────────────────────────────────────────────────────
@@ -517,13 +520,53 @@ class SessionMemory:
 
     # ── Screen graph ─────────────────────────────────────────────────
 
-    def record_screen(self, signature: str, elements: List[str]):
+    def record_screen(
+        self,
+        signature: str,
+        elements: List[str],
+        semantic_fingerprint: Optional[Dict[str, Any]] = None,
+        activity: str = "",
+        page_source: str = "",
+    ):
+        """Record a screen visit with optional semantic fingerprint.
+        
+        Uses semantic fingerprinting to detect if this is truly a new screen
+        or just a content variation (scrolled list, modal, etc.) of a known screen.
+        """
         now = datetime.utcnow().isoformat() + "Z"
+        
+        # Check if this screen is semantically similar to an existing one
+        if semantic_fingerprint:
+            from .semantic_fingerprint import are_screens_similar
+            for existing_sig, existing_node in self.screens.items():
+                if existing_node.semantic_fingerprint and are_screens_similar(
+                    semantic_fingerprint, existing_node.semantic_fingerprint
+                ):
+                    # This is a content variation, update the existing screen
+                    existing_node.last_seen = now
+                    existing_node.visit_count += 1
+                    existing_node.elements_snapshot = elements[:50]
+                    # Store the latest page source for future comparisons
+                    if page_source:
+                        existing_node.page_source = page_source[:10000]  # Limit size
+                    self._persist()
+                    logger.debug(
+                        "Screen %s matched semantic fingerprint of %s -- updating existing",
+                        signature[:12], existing_sig[:12]
+                    )
+                    return
+        
         if signature in self.screens:
             node = self.screens[signature]
             node.last_seen = now
             node.visit_count += 1
             node.elements_snapshot = elements[:50]
+            if semantic_fingerprint:
+                node.semantic_fingerprint = semantic_fingerprint
+            if activity:
+                node.activity = activity
+            if page_source:
+                node.page_source = page_source[:10000]  # Limit size
         else:
             node = ScreenNode(
                 signature=signature,
@@ -531,6 +574,9 @@ class SessionMemory:
                 last_seen=now,
                 visit_count=1,
                 elements_snapshot=elements[:50],
+                semantic_fingerprint=semantic_fingerprint,
+                activity=activity,
+                page_source=page_source[:10000] if page_source else "",
             )
             self.screens[signature] = node
         self._persist()
@@ -565,9 +611,32 @@ class SessionMemory:
         ]
 
     def get_screen_visit_count(self, sig: str) -> int:
-        """Return how many times a screen has been visited."""
+        """Return how many times a screen has been visited.
+        
+        Also checks semantic fingerprints to find matching screens
+        that may have different hash-based signatures.
+        """
         node = self.screens.get(sig)
-        return node.visit_count if node else 0
+        if node:
+            return node.visit_count
+        
+        # Check if any screen with a different signature has a matching
+        # semantic fingerprint
+        from .semantic_fingerprint import are_screens_similar
+        target_node = self.screens.get(sig)
+        if target_node and target_node.semantic_fingerprint:
+            total_visits = 0
+            for other_sig, other_node in self.screens.items():
+                if other_sig != sig and other_node.semantic_fingerprint:
+                    if are_screens_similar(
+                        target_node.semantic_fingerprint,
+                        other_node.semantic_fingerprint
+                    ):
+                        total_visits += other_node.visit_count
+            if total_visits > 0:
+                return total_visits
+        
+        return 0
 
     def detect_action_loop(self, window: int = 8) -> bool:
         """Check if the recent N actions show a repeating loop pattern.

@@ -381,3 +381,27 @@ class AppiumController:
             logger.error("Error typing at (%d, %d): %s", x, y, e)
             return False
 
+    def get_current_activity(self) -> str:
+        """Get the current Android activity name from the driver."""
+        if not self.driver:
+            return "unknown"
+        try:
+            # Get current activity from Android driver
+            activity = self.driver.current_activity
+            return activity or "unknown"
+        except Exception as e:
+            logger.debug("Could not get current activity: %s", e)
+            return "unknown"
+
+    def get_current_package(self) -> str:
+        """Get the current Android package name from the driver."""
+        if not self.driver:
+            return "unknown"
+        try:
+            # Get current package from Android driver
+            package = self.driver.current_package
+            return package or "unknown"
+        except Exception as e:
+            logger.debug("Could not get current package: %s", e)
+            return "unknown"
+

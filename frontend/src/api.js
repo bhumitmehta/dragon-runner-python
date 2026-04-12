@@ -1,3 +1,10 @@
+/* ── Test Plan ──────────────────────────────────────────────────── */
+export const getTestPlan = () => request('/testplan');
+export const setTestPlan = (plan) => request('/testplan', { method: 'POST', body: JSON.stringify(plan) });
+export const deleteTestPlan = () => request('/testplan', { method: 'DELETE' });
+
+export const getSmartTestPlan = () => request('/smarttest/plan');
+export const setSmartTestPlan = (plan) => request('/smarttest/plan', { method: 'POST', body: JSON.stringify(plan) });
 /**
  * API client for the Dragon Runner backend (FastAPI on port 8000).
  *

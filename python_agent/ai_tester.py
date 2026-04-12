@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 from . import adb, appium_server, config
 from .appium_controller import AppiumController
 from .memory import state_signature_from_xml
+from .semantic_fingerprint import semantic_screen_fingerprint
 from .ui_extract import (
     extract_clickable_accessibility_ids,
     extract_clickable_resource_ids,
@@ -100,7 +101,17 @@ class AITester:
         acc_ids = extract_clickable_accessibility_ids(page_source)
         res_ids = extract_clickable_resource_ids(page_source)
         texts = extract_clickable_texts(page_source)
-        state_sig = state_signature_from_xml(page_source)
+        
+        # Get activity name for semantic fingerprinting
+        activity = ""
+        try:
+            activity = self.controller.get_current_activity() or ""
+        except Exception:
+            pass
+        
+        # Use semantic fingerprinting for robust screen identity
+        state_sig = state_signature_from_xml(page_source, activity)
+        semantic_fp = semantic_screen_fingerprint(page_source, activity)
 
         return {
             "page_source": page_source,
@@ -109,6 +120,8 @@ class AITester:
             "resource_ids": res_ids,
             "clickable_texts": texts,
             "state_signature": state_sig,
+            "activity": activity,
+            "semantic_fingerprint": semantic_fp,
         }
 
     def _create_action_prompt(self, ui_context: Dict[str, Any], goal: str) -> str:

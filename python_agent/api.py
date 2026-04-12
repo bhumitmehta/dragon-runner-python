@@ -67,6 +67,68 @@ _agent_status: Dict[str, Any] = {
     "app_profile": None,
 }
 
+# Test plan storage (in-memory with persistence via KB)
+
+# In-memory test plan (persisted in KB for real use)
+_current_test_plan: Optional[Dict[str, Any]] = None
+
+# In-memory smart test plan (for smart-test mode)
+_current_smart_test_plan: Optional[Dict[str, Any]] = None
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Test Plan API
+# ════════════════════════════════════════════════════════════════════
+
+from fastapi import Body
+
+@app.get("/api/testplan", tags=["TestPlan"])
+def get_test_plan():
+    """Get the current test plan (manual or generated)."""
+    global _current_test_plan
+    if _current_test_plan is None:
+        # Try to load from KB if available
+        kb = _get_kb()
+        plan = getattr(kb, "get_current_test_plan", lambda: None)()
+        if plan:
+            _current_test_plan = plan
+    return _current_test_plan or {}
+
+@app.post("/api/testplan", tags=["TestPlan"])
+def set_test_plan(plan: Dict[str, Any] = Body(...)):
+    """Set or update the current test plan."""
+    global _current_test_plan
+    _current_test_plan = plan
+    # Persist to KB if available
+    kb = _get_kb()
+    if hasattr(kb, "save_current_test_plan"):
+        kb.save_current_test_plan(plan)
+    return {"status": "ok", "plan": _current_test_plan}
+
+@app.delete("/api/testplan", tags=["TestPlan"])
+def delete_test_plan():
+    """Delete the current test plan."""
+    global _current_test_plan
+    _current_test_plan = None
+    kb = _get_kb()
+    if hasattr(kb, "delete_current_test_plan"):
+        kb.delete_current_test_plan()
+    return {"status": "deleted"}
+
+# Smart test plan retrieval (for smart-test mode)
+@app.get("/api/smarttest/plan", tags=["TestPlan"])
+def get_smart_test_plan():
+    """Get the current smart test plan (if any)."""
+    global _current_smart_test_plan
+    return _current_smart_test_plan or {}
+
+@app.post("/api/smarttest/plan", tags=["TestPlan"])
+def set_smart_test_plan(plan: Dict[str, Any] = Body(...)):
+    """Set the current smart test plan (for smart-test mode)."""
+    global _current_smart_test_plan
+    _current_smart_test_plan = plan
+    return {"status": "ok", "plan": _current_smart_test_plan}
+
 
 def _get_kb() -> KnowledgeBase:
     global _kb
@@ -453,11 +515,9 @@ def get_cycles():
 # ════════════════════════════════════════════════════════════════════
 
 @app.get("/api/screens", tags=["Screens"])
-def list_screens(app: Optional[str] = Query(None)):
-    """List all discovered screens with summary info."""
-    if app:
-        return _get_kb().get_screens_for_app(app)
-    return _get_graph().get_all_screens()
+def list_screens(app: str = Query(...)):
+    """List all discovered screens with summary info for the given app."""
+    return _get_kb().get_screens_for_app(app)
 
 
 @app.get("/api/screens/{sig}", tags=["Screens"])
@@ -492,27 +552,18 @@ def get_screen_screenshot(sig: str):
 # ════════════════════════════════════════════════════════════════════
 
 @app.get("/api/runs", tags=["Dashboard"])
-def list_runs(app: Optional[str] = Query(None)):
-    """List all agent runs (past and current)."""
+def list_runs(app: str = Query(...)):
+    """List all agent runs (past and current) for the given app."""
     kb = _get_kb()
-    if app:
-        return kb.get_runs_for_app(app)
-    return kb.runs.all()
+    return kb.get_runs_for_app(app)
 
 
 @app.get("/api/bugs", tags=["Dashboard"])
-def list_bugs(app: Optional[str] = Query(None)):
-    """Return all bugs found across all sessions."""
+def list_bugs(app: str = Query(...)):
+    """Return all bugs found for the given app."""
     kb = _get_kb()
-    if app:
-        bug_discoveries = kb.get_bugs_for_app(app)
-        all_scripts = kb.get_verification_scripts_for_app(app)
-    else:
-        bug_discoveries = [
-            d for d in kb.discoveries.all()
-            if d.get("type") in ("bug", "visual_bug", "crash")
-        ]
-        all_scripts = kb.verification_scripts.all()
+    bug_discoveries = kb.get_bugs_for_app(app)
+    all_scripts = kb.get_verification_scripts_for_app(app)
     # Also collect bugs from verification scripts
     script_bugs = []
     for vs in all_scripts:
@@ -522,7 +573,6 @@ def list_bugs(app: Optional[str] = Query(None)):
                 "script_name": vs.get("name", ""),
                 "description": bug,
             })
-    
     # Add screen names to exploration bugs
     for bug in bug_discoveries:
         sig = bug.get("screen_signature")
@@ -530,7 +580,11 @@ def list_bugs(app: Optional[str] = Query(None)):
             screen = kb.graph.get_screen(sig)
             if screen:
                 bug["screen_name"] = screen.get("name", "")
-    
+        # Attach run_id for versioning
+        if "run_id" in bug:
+            bug["run_id"] = bug["run_id"]
+        else:
+            bug["run_id"] = None
     return {
         "exploration_bugs": bug_discoveries,
         "script_bugs": script_bugs,
@@ -594,12 +648,10 @@ def list_features(app: Optional[str] = Query(None)):
 
 
 @app.get("/api/discoveries", tags=["Dashboard"])
-def list_discoveries(limit: int = Query(50, ge=1, le=500), app: Optional[str] = Query(None)):
-    """Return the most recent discoveries."""
+def list_discoveries(limit: int = Query(50, ge=1, le=500), app: str = Query(...)):
+    """Return the most recent discoveries for the given app."""
     kb = _get_kb()
-    if app:
-        return kb.get_discoveries_for_app(app, limit)
-    return kb.get_recent_discoveries(limit)
+    return kb.get_discoveries_for_app(app, limit)
 
 
 @app.get("/api/element-behaviors", tags=["Dashboard"])

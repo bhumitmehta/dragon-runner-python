@@ -355,25 +355,41 @@ class Memory:
         })
 
 
-def state_signature_from_xml(page_source: str) -> str:
-    import xml.etree.ElementTree as ET
-    # Parse XML and apply skeletonization for repeated structures
-    try:
-        root = ET.fromstring(page_source)
-        _apply_skeletonization(root)
+def state_signature_from_xml(page_source: str, activity: str = "") -> str:
+    """
+    Generate a semantic fingerprint for the current screen.
+    
+    DEPRECATED: This function now uses semantic fingerprinting instead of
+    XML structure hashing. Pass the activity name for best results.
+    
+    Args:
+        page_source: XML page source from Appium
+        activity: Current Android activity name (recommended for accurate fingerprinting)
         
-        # Remove dynamic attributes and text content
-        for el in root.iter():
-            # Remove dynamic attributes
-            for attr in [
-                "text", "content-desc", "resource-id", "bounds", "index", "checked", "selected", "focused", "scrollable", "password", "long-clickable", "enabled", "displayed"
-            ]:
-                if attr in el.attrib:
-                    el.attrib[attr] = ""
-            # Remove dynamic text content
-            el.text = ""
-            el.tail = ""
-        normalized = ET.tostring(root, encoding="utf-8", method="xml")
-    except Exception:
-        normalized = " ".join((page_source or "").split()).encode('utf-8')
-    return hashlib.sha256(normalized).hexdigest()[:16]
+    Returns:
+        16-character hex hash string
+    """
+    # Import here to avoid circular imports
+    try:
+        from semantic_fingerprint import SemanticFingerprint
+        fp = SemanticFingerprint.from_xml(page_source, activity or "unknown")
+        return fp.semantic_hash
+    except ImportError:
+        # Fallback to old implementation if semantic_fingerprint not available
+        import xml.etree.ElementTree as ET
+        try:
+            root = ET.fromstring(page_source)
+            _apply_skeletonization(root)
+            
+            for el in root.iter():
+                for attr in [
+                    "text", "content-desc", "resource-id", "bounds", "index", "checked", "selected", "focused", "scrollable", "password", "long-clickable", "enabled", "displayed"
+                ]:
+                    if attr in el.attrib:
+                        el.attrib[attr] = ""
+                el.text = ""
+                el.tail = ""
+            normalized = ET.tostring(root, encoding="utf-8", method="xml")
+        except Exception:
+            normalized = " ".join((page_source or "").split()).encode('utf-8')
+        return hashlib.sha256(normalized).hexdigest()[:16]

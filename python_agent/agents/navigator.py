@@ -50,7 +50,11 @@ class NavigatorAgent(BaseAgent):
         acc_ids = extract_clickable_accessibility_ids(page_source)
         res_ids = extract_clickable_resource_ids(page_source)
         texts = extract_clickable_texts(page_source)
-        state_sig = state_signature_from_xml(page_source)
+        
+        # Get current activity for semantic fingerprinting
+        current_activity = self.controller.get_current_activity()
+        state_sig = state_signature_from_xml(page_source, current_activity)
+        
         return {
             "page_source": page_source,
             "screenshot_path": screenshot_path,
@@ -58,6 +62,7 @@ class NavigatorAgent(BaseAgent):
             "resource_ids": res_ids,
             "clickable_texts": texts,
             "state_signature": state_sig,
+            "current_activity": current_activity,  # Added for semantic fingerprinting
         }
 
     def execute_step(
@@ -94,7 +99,8 @@ class NavigatorAgent(BaseAgent):
         # Capture post-action state
         time.sleep(0.5)
         post_source = self.controller.get_page_source() or ""
-        result["state_signature_after"] = state_signature_from_xml(post_source)
+        current_activity = self.controller.get_current_activity()
+        result["state_signature_after"] = state_signature_from_xml(post_source, current_activity)
         result["state_signature_before"] = ui_context.get("state_signature")
         return result
 
@@ -124,7 +130,8 @@ class NavigatorAgent(BaseAgent):
         post_acc_ids = extract_clickable_accessibility_ids(post_source)
         post_res_ids = extract_clickable_resource_ids(post_source)
         post_texts = extract_clickable_texts(post_source)
-        result["state_signature_after"] = state_signature_from_xml(post_source)
+        current_activity = self.controller.get_current_activity()
+        result["state_signature_after"] = state_signature_from_xml(post_source, current_activity)
         result["post_screenshot_path"] = post_screenshot
         result["post_accessibility_ids"] = post_acc_ids
         result["post_resource_ids"] = post_res_ids

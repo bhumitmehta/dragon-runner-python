@@ -298,10 +298,20 @@ class OrchestratorAgent:
         # Record initial screen
         self.memory.record_screen(ui_ctx["state_signature"], ui_ctx["accessibility_ids"])
         name = self._generate_screen_name(ui_ctx)
+        # Analyze screenshot for description
+        description = ""
+        screenshot_path = ui_ctx.get("screenshot_path", "")
+        if screenshot_path:
+            try:
+                from ..vlm import analyze_screen_once
+                description = analyze_screen_once(screenshot_path, ui_ctx["state_signature"])
+            except Exception as e:
+                logger.warning(f"VLM screen description failed: {e}")
         self.kb.record_screen(
             ui_ctx["state_signature"], ui_ctx["accessibility_ids"],
-            screenshot=ui_ctx.get("screenshot_path", ""),
+            screenshot=screenshot_path,
             name=name,
+            description=description,
         )
 
         # Create plan
@@ -513,10 +523,20 @@ Screen name:"""
         # Get UI context and record screen to KB with generated name
         ui_ctx = self.navigator.get_ui_context(f"step_{self.memory.step_counter:04d}")
         ui_ctx["screen_name"] = self._generate_screen_name(ui_ctx)
+        # Analyze screenshot for description
+        description = ""
+        screenshot_path = ui_ctx.get("screenshot_path", "")
+        if screenshot_path:
+            try:
+                from ..vlm import analyze_screen_once
+                description = analyze_screen_once(screenshot_path, ui_ctx["state_signature"])
+            except Exception as e:
+                logger.warning(f"VLM screen description failed: {e}")
         self.kb.record_screen(
             ui_ctx["state_signature"], ui_ctx["accessibility_ids"],
-            screenshot=ui_ctx.get("screenshot_path", ""),
+            screenshot=screenshot_path,
             name=ui_ctx["screen_name"],
+            description=description,
         )
         
         if self.engine:
@@ -621,8 +641,10 @@ Screen name:"""
 
     def _retry_step(self, step, task, first_result: Dict, max_retries: int) -> bool:
         """Retry a failed step up to ``max_retries`` times."""
+        # Get fresh UI context for retry
+        ui_ctx = self.navigator.get_ui_context(f"retry_{self.memory.step_counter:04d}")
         if self.engine:
-            return self.engine.retry_step(step, task, max_retries)
+            return self.engine.retry_step(step, task, max_retries, ui_ctx)
         # Fallback: direct retry
         for attempt in range(max_retries):
             logger.debug("Retry %d/%d...", attempt + 1, max_retries)
@@ -1003,9 +1025,19 @@ Screen name:"""
                 self.memory.record_screen(
                     ui_ctx["state_signature"], ui_ctx["accessibility_ids"]
                 )
+                # Analyze screenshot for description
+                description = ""
+                screenshot_path = ui_ctx.get("screenshot_path", "")
+                if screenshot_path:
+                    try:
+                        from ..vlm import analyze_screen_once
+                        description = analyze_screen_once(screenshot_path, ui_ctx["state_signature"])
+                    except Exception as e:
+                        logger.warning(f"VLM screen description failed: {e}")
                 self.kb.record_screen(
                     ui_ctx["state_signature"], ui_ctx["accessibility_ids"],
-                    screenshot=ui_ctx.get("screenshot_path", ""),
+                    screenshot=screenshot_path,
+                    description=description,
                 )
 
                 # Cache screen sources for end-of-session audits
@@ -1162,9 +1194,19 @@ Screen name:"""
                             "state_signature": sig_after,
                         }
                         self.explorer.plan_for_new_screen(post_ctx, self.memory)
+                        # Analyze screenshot for description
+                        description = ""
+                        screenshot_path = post_ctx.get("screenshot_path", "")
+                        if screenshot_path:
+                            try:
+                                from ..vlm import analyze_screen_once
+                                description = analyze_screen_once(screenshot_path, sig_after)
+                            except Exception as e:
+                                logger.warning(f"VLM screen description failed: {e}")
                         self.kb.record_screen(
                             sig_after, post_ctx.get("accessibility_ids", []),
-                            screenshot=post_ctx.get("screenshot_path", ""),
+                            screenshot=screenshot_path,
+                            description=description,
                         )
                         # Cache new screen sources for audit phase
                         if sig_after not in self._screen_sources:
@@ -1300,6 +1342,7 @@ Screen name:"""
            d. Record navigation path in KB for future reuse.
         5. Persist everything in KB + session memory.
         6. Produce report.
+        
         """
         logger.info("=" * 60)
         logger.info("MULTI-AGENT ORCHESTRATOR -- SMART TEST mode")

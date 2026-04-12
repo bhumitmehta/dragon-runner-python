@@ -24,6 +24,7 @@ from ..ui_extract import (
     extract_clickable_texts,
 )
 from ..memory import state_signature_from_xml
+from ..semantic_fingerprint import semantic_screen_fingerprint
 
 
 # Common crash / error dialog indicators
@@ -121,13 +122,22 @@ class RecoveryAgent(BaseAgent):
             page_source = self.controller.get_page_source() or ""
             acc_ids = extract_clickable_accessibility_ids(page_source)
             texts = extract_clickable_texts(page_source)
-            sig = state_signature_from_xml(page_source)
+            
+            # Get activity for semantic fingerprinting
+            activity = ""
+            try:
+                activity = self.controller.get_current_activity() or ""
+            except Exception:
+                pass
+            
+            sig = state_signature_from_xml(page_source, activity)
 
             current_ctx = {
                 "accessibility_ids": acc_ids,
                 "resource_ids": extract_clickable_resource_ids(page_source),
                 "clickable_texts": texts,
                 "state_signature": sig,
+                "activity": activity,
                 "page_source": page_source,
             }
 

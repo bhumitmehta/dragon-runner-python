@@ -49,13 +49,21 @@ export default function TestResults() {
         {(bugs?.exploration_bugs || []).length > 0 || (bugs?.script_bugs || []).length > 0 ? (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Source</th><th>Type</th><th>Description</th><th>Time</th></tr></thead>
+              <thead><tr><th>Source</th><th>Type</th><th>Description</th><th>Screenshot</th><th>Run ID</th><th>Time</th></tr></thead>
               <tbody>
                 {(bugs?.exploration_bugs || []).map((b, i) => (
                   <tr key={`e${i}`}>
                     <td><span className="badge badge-danger">exploration</span></td>
                     <td>{b.type}</td>
                     <td>{b.description}</td>
+                    <td>
+                      {b.screenshot ? (
+                        <a href={b.screenshot} target="_blank" rel="noopener noreferrer">
+                          <img src={b.screenshot} alt="screenshot" style={{ maxWidth: 48, maxHeight: 48, borderRadius: 4, border: '1px solid #eee' }} />
+                        </a>
+                      ) : '—'}
+                    </td>
+                    <td className="mono text-xs">{b.run_id || '—'}</td>
                     <td className="text-xs text-muted">{b.timestamp ? new Date(b.timestamp).toLocaleString() : '—'}</td>
                   </tr>
                 ))}
@@ -64,6 +72,8 @@ export default function TestResults() {
                     <td><span className="badge badge-warning">script</span></td>
                     <td>{b.script_name}</td>
                     <td>{b.description}</td>
+                    <td>—</td>
+                    <td>—</td>
                     <td>—</td>
                   </tr>
                 ))}

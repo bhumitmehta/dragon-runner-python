@@ -15,12 +15,16 @@ import { usePolling, AgentProvider, AppSelectorProvider } from './hooks';
 import { getAgentStatus, getApps } from './api';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 
+
+import TestPlan from './pages/TestPlan';
+
 const NAV = [
   { to: '/',            icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/apps',        icon: Smartphone,      label: 'Applications' },
   { to: '/agent',       icon: Play,            label: 'Agent Control' },
   { to: '/graph',       icon: GitFork,         label: 'Screen Graph' },
   { to: '/screens',     icon: Monitor,         label: 'Screens' },
+  { to: '/testplan',    icon: Activity,        label: 'Test Plan' },
   { to: '/results',     icon: Bug,             label: 'Test Results' },
   { to: '/discoveries', icon: FlaskConical,    label: 'Discoveries' },
 ];
@@ -124,6 +128,7 @@ export default function App() {
           <Route path="/graph"       element={<ScreenGraph />} />
           <Route path="/screens"     element={<Screens />} />
           <Route path="/screens/:sig" element={<ScreenDetail />} />
+          <Route path="/testplan"    element={<TestPlan />} />
           <Route path="/results"     element={<TestResults />} />
           <Route path="/discoveries" element={<Discoveries />} />
         </Routes>

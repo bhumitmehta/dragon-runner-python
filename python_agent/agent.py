@@ -15,6 +15,7 @@ from .ui_extract import (
 from . import adb, appium_server, config
 from .appium_controller import AppiumController
 from .memory import Memory, state_signature_from_xml
+from .semantic_fingerprint import semantic_screen_fingerprint
 from .vlm import VLMQuotaExceeded, VLMUnavailable, get_vlm_response
 from .bug_localization.integration import (
     BugLocalizationIntegration,
@@ -76,7 +77,14 @@ class Agent:
                 print("Could not get UI state. Exiting.")
                 break
 
-            state_sig = state_signature_from_xml(page_source)
+            # Get activity for semantic fingerprinting
+            activity = ""
+            try:
+                activity = self.appium_controller.get_current_activity() or ""
+            except Exception:
+                pass
+
+            state_sig = state_signature_from_xml(page_source, activity)
             self.memory.add_state_signature(state_sig)
 
             # Loop breaker: same screen too many times
@@ -89,8 +97,12 @@ class Agent:
                 page_source = self.appium_controller.get_page_source()
                 if not page_source:
                      break
-                # Update sig for the refreshed page
-                state_sig = state_signature_from_xml(page_source)
+                # Update activity and sig for the refreshed page
+                try:
+                    activity = self.appium_controller.get_current_activity() or ""
+                except Exception:
+                    activity = ""
+                state_sig = state_signature_from_xml(page_source, activity)
                 self.memory.add_state_signature(state_sig)
 
             # 2. Process UI and Plan Action

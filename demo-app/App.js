@@ -4,6 +4,11 @@
  */
 
 import React, { useState } from 'react';
+import CalculatorScreen from './CalculatorScreen';
+import LoginScreen from './LoginScreen';
+import ProductsScreen from './ProductsScreen';
+import CartScreen from './CartScreen';
+import ContactFormScreen from './ContactFormScreen';
 import {
   SafeAreaView,
   ScrollView,
@@ -178,399 +183,65 @@ const App = () => {
     </View>
   );
 
-  // Render Login Screen
+  // Render Login Screen (modular)
   const renderLogin = () => (
-    <View style={styles.screen}>
-      <Text style={styles.title} accessibilityLabel="login-title">
-        {isLoggedIn ? 'Profile' : 'Login'}
-      </Text>
-
-      {isLoggedIn ? (
-        <View>
-          <Text style={styles.welcomeText} accessibilityLabel="welcome-message">
-            Welcome, {username}!
-          </Text>
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={() => {
-              setIsLoggedIn(false);
-              setUsername('');
-              setPassword('');
-            }}
-            accessibilityLabel="logout-button"
-          >
-            <Text style={styles.buttonText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View>
-          <TextInput
-            style={styles.input}
-            placeholder="Username"
-            value={username}
-            onChangeText={setUsername}
-            accessibilityLabel="username-input"
-            autoCapitalize="none"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            accessibilityLabel="password-input"
-          />
-          
-          {bugMode && (
-            <Text style={styles.hintText} accessibilityLabel="login-hint">
-              Hint: Any username works! (BUG)
-            </Text>
-          )}
-          
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={handleLogin}
-            accessibilityLabel="login-button"
-          >
-            <Text style={styles.buttonText}>Login</Text>
-          </TouchableOpacity>
-          
-          <Text style={styles.credText}>Demo: demo / password123</Text>
-        </View>
-      )}
-
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => setCurrentScreen('home')}
-        accessibilityLabel="back-to-home"
-      >
-        <Text style={styles.backButtonText}>← Back</Text>
-      </TouchableOpacity>
-    </View>
+    <LoginScreen
+      isLoggedIn={isLoggedIn}
+      username={username}
+      password={password}
+      setUsername={setUsername}
+      setPassword={setPassword}
+      handleLogin={handleLogin}
+      setIsLoggedIn={setIsLoggedIn}
+      styles={styles}
+      bugMode={bugMode}
+      setCurrentScreen={setCurrentScreen}
+    />
   );
 
-  // Render Products Screen
+  // Render Products Screen (modular)
   const renderProducts = () => (
-    <View style={styles.screen}>
-      <Text style={styles.title} accessibilityLabel="products-title">Products</Text>
-      
-      <View style={styles.quantityRow}>
-        <Text>Quantity:</Text>
-        <TouchableOpacity
-          style={styles.qtyButton}
-          onPress={() => setQuantity(Math.max(1, quantity - 1))}
-          accessibilityLabel="decrease-quantity"
-        >
-          <Text style={styles.qtyButtonText}>-</Text>
-        </TouchableOpacity>
-        <Text style={styles.qtyText} accessibilityLabel="quantity-display">
-          {bugMode ? quantity + 1 : quantity} {/* BUG: Shows wrong quantity */}
-        </Text>
-        <TouchableOpacity
-          style={styles.qtyButton}
-          onPress={() => setQuantity(quantity + 1)}
-          accessibilityLabel="increase-quantity"
-        >
-          <Text style={styles.qtyButtonText}>+</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView style={styles.productList}>
-        {products.map((product) => (
-          <View key={product.id} style={styles.productCard}>
-            <View>
-              <Text style={styles.productName} accessibilityLabel={`product-${product.id}-name`}>
-                {product.name}
-              </Text>
-              <Text style={styles.productPrice} accessibilityLabel={`product-${product.id}-price`}>
-                ${bugMode ? (product.price * 0.9).toFixed(2) : product.price.toFixed(2)}
-                {/* BUG: Shows 10% lower price than actual */}
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => addToCart(product)}
-              accessibilityLabel={`add-${product.id}-to-cart`}
-            >
-              <Text style={styles.addButtonText}>Add</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-      </ScrollView>
-
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => setCurrentScreen('home')}
-        accessibilityLabel="back-to-home"
-      >
-        <Text style={styles.backButtonText}>← Back</Text>
-      </TouchableOpacity>
-    </View>
+    <ProductsScreen
+      products={products}
+      quantity={quantity}
+      setQuantity={setQuantity}
+      addToCart={addToCart}
+      styles={styles}
+      bugMode={bugMode}
+      setCurrentScreen={setCurrentScreen}
+      cartItems={cartItems}
+    />
   );
 
-  // Render Cart Screen
+  // Render Cart Screen (modular)
   const renderCart = () => (
-    <View style={styles.screen}>
-      <Text style={styles.title} accessibilityLabel="cart-title">Shopping Cart</Text>
-      
-      {cartItems.length === 0 ? (
-        <Text style={styles.emptyCart} accessibilityLabel="empty-cart-message">
-          Your cart is empty
-        </Text>
-      ) : (
-        <View>
-          <ScrollView style={styles.cartList}>
-            {cartItems.map((item, index) => (
-              <View key={item.id} style={styles.cartItem}>
-                <View>
-                  <Text style={styles.cartItemName}>{item.name}</Text>
-                  <Text style={styles.cartItemDetails}>
-                    ${item.price.toFixed(2)} x {item.qty}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => removeFromCart(item.id)}
-                  accessibilityLabel={`remove-item-${item.id}`}
-                >
-                  <Text style={styles.removeButtonText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </ScrollView>
-          
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total:</Text>
-            <Text style={styles.totalAmount} accessibilityLabel="cart-total">
-              ${calculateTotal()}
-              {bugMode && <Text style={styles.bugIndicator}> (Overcharged!)</Text>}
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            style={styles.checkoutButton}
-            onPress={() => {
-              if (bugMode) {
-                // BUG: Checkout without confirmation
-                Alert.alert('Order Placed', 'Thank you!');
-                setCartItems([]);
-              } else {
-                setShowModal(true);
-              }
-            }}
-            accessibilityLabel="checkout-button"
-          >
-            <Text style={styles.buttonText}>Checkout</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => setCurrentScreen('home')}
-        accessibilityLabel="back-to-home"
-      >
-        <Text style={styles.backButtonText}>← Back</Text>
-      </TouchableOpacity>
-
-      {/* Checkout Modal */}
-      <Modal visible={showModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Confirm Order</Text>
-            <Text>Total: ${calculateTotal()}</Text>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalCancel}
-                onPress={() => setShowModal(false)}
-                accessibilityLabel="cancel-checkout"
-              >
-                <Text>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalConfirm}
-                onPress={() => {
-                  setShowModal(false);
-                  setCartItems([]);
-                  Alert.alert('Success', 'Order placed successfully!');
-                }}
-                accessibilityLabel="confirm-checkout"
-              >
-                <Text style={styles.buttonText}>Confirm</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </View>
+    <CartScreen
+      cartItems={cartItems}
+      removeFromCart={removeFromCart}
+      calculateTotal={calculateTotal}
+      styles={styles}
+      bugMode={bugMode}
+      setCurrentScreen={setCurrentScreen}
+      showModal={showModal}
+      setShowModal={setShowModal}
+      setCartItems={setCartItems}
+    />
   );
 
-  // Render Calculator Screen
-  const renderCalculator = () => {
-    const [num1, setNum1] = useState('');
-    const [num2, setNum2] = useState('');
-    const [result, setResult] = useState(null);
+  // Render Calculator Screen (modular)
+  const renderCalculator = () => (
+    <CalculatorScreen setCurrentScreen={setCurrentScreen} />
+  );
 
-    const calculate = (op) => {
-      const a = parseFloat(num1) || 0;
-      const b = parseFloat(num2) || 0;
-      let res;
-      
-      switch (op) {
-        case '+':
-          res = bugMode ? a + b + 1 : a + b; // BUG: Adds 1 extra
-          break;
-        case '-':
-          res = bugMode ? a - b - 1 : a - b; // BUG: Subtracts 1 extra
-          break;
-        case '*':
-          res = bugMode ? a * b * 2 : a * b; // BUG: Doubles result
-          break;
-        case '/':
-          res = bugMode ? (b !== 0 ? a / b / 2 : 0) : (b !== 0 ? a / b : 'Error'); // BUG: Halves result
-          break;
-        default:
-          res = 0;
-      }
-      setResult(res);
-    };
-
-    return (
-      <View style={styles.screen}>
-        <Text style={styles.title} accessibilityLabel="calculator-title">Calculator</Text>
-        
-        <TextInput
-          style={styles.input}
-          placeholder="First number"
-          keyboardType="numeric"
-          value={num1}
-          onChangeText={setNum1}
-          accessibilityLabel="calc-input-1"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Second number"
-          keyboardType="numeric"
-          value={num2}
-          onChangeText={setNum2}
-          accessibilityLabel="calc-input-2"
-        />
-        
-        <View style={styles.calcButtons}>
-          {['+', '-', '*', '/'].map((op) => (
-            <TouchableOpacity
-              key={op}
-              style={styles.calcButton}
-              onPress={() => calculate(op)}
-              accessibilityLabel={`calc-${op === '*' ? 'multiply' : op === '/' ? 'divide' : op === '+' ? 'add' : 'subtract'}`}
-            >
-              <Text style={styles.calcButtonText}>{op}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {result !== null && (
-          <Text style={styles.resultText} accessibilityLabel="calc-result">
-            Result: {result}
-            {bugMode && <Text style={styles.bugIndicator}> (Wrong!)</Text>}
-          </Text>
-        )}
-
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => setCurrentScreen('home')}
-          accessibilityLabel="back-to-home"
-        >
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
-  // Render Contact Form Screen
-  const renderForm = () => {
-    const [formEmail, setFormEmail] = useState('');
-    const [formMessage, setFormMessage] = useState('');
-    const [submitted, setSubmitted] = useState(false);
-
-    const handleSubmit = () => {
-      if (bugMode) {
-        // BUG: No validation
-        setSubmitted(true);
-        Alert.alert('Sent', 'Message sent!');
-      } else {
-        if (!validateEmail(formEmail)) {
-          Alert.alert('Error', 'Please enter a valid email');
-          return;
-        }
-        if (formMessage.length < 10) {
-          Alert.alert('Error', 'Message must be at least 10 characters');
-          return;
-        }
-        setSubmitted(true);
-        Alert.alert('Success', 'Message sent successfully!');
-      }
-    };
-
-    return (
-      <View style={styles.screen}>
-        <Text style={styles.title} accessibilityLabel="form-title">Contact Us</Text>
-        
-        <TextInput
-          style={styles.input}
-          placeholder="Your Email"
-          value={formEmail}
-          onChangeText={setFormEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          accessibilityLabel="form-email-input"
-        />
-        
-        {bugMode && formEmail && !validateEmail(formEmail) && (
-          <Text style={styles.validText} accessibilityLabel="email-validation">
-            ✓ Valid email (BUG: It's not!)
-          </Text>
-        )}
-        
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Your Message"
-          value={formMessage}
-          onChangeText={setFormMessage}
-          multiline
-          numberOfLines={4}
-          accessibilityLabel="form-message-input"
-        />
-        
-        <Text style={styles.charCount} accessibilityLabel="char-count">
-          {bugMode ? formMessage.length + 10 : formMessage.length} characters
-          {/* BUG: Shows 10 extra characters */}
-        </Text>
-
-        <TouchableOpacity
-          style={styles.submitButton}
-          onPress={handleSubmit}
-          accessibilityLabel="submit-form-button"
-        >
-          <Text style={styles.buttonText}>Send Message</Text>
-        </TouchableOpacity>
-
-        {submitted && (
-          <Text style={styles.successText} accessibilityLabel="form-success">
-            ✓ Form submitted
-          </Text>
-        )}
-
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => setCurrentScreen('home')}
-          accessibilityLabel="back-to-home"
-        >
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
+  // Render Contact Form Screen (modular)
+  const renderForm = () => (
+    <ContactFormScreen
+      validateEmail={validateEmail}
+      styles={styles}
+      bugMode={bugMode}
+      setCurrentScreen={setCurrentScreen}
+    />
+  );
 
   // Main render
   return (

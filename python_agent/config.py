@@ -90,22 +90,16 @@ def apply_app_profile(profile_name: str) -> None:
     ANDROID_CAPABILITIES["appium:appActivity"] = APP_ACTIVITY
 
 
-# App under test (Android) — defaults, may be overridden by profile
-APP_PACKAGE = os.getenv("APP_PACKAGE", "com.saucelabs.mydemoapp.rn")
-APP_ACTIVITY = os.getenv("APP_ACTIVITY", ".MainActivity")
+# App under test (Android) — NO DEFAULTS: must select a profile via --app or APP_PROFILE env var
+APP_PACKAGE = os.getenv("APP_PACKAGE", "")
+APP_ACTIVITY = os.getenv("APP_ACTIVITY", "")
 
-_default_apk_path = (
-    REPO_ROOT
-    / "appium-wdio-react-native-ios-android"
-    / "app"
-    / "android"
-    / "Android-MyDemoAppRN.1.3.0.build-244.apk"
-)
+_default_apk_path = ""
 _apk_path_env = os.getenv("APK_PATH")
-APK_PATH = Path(_apk_path_env).expanduser() if _apk_path_env else _default_apk_path
+APK_PATH = Path(_apk_path_env).expanduser() if _apk_path_env else Path("")
 
 # Device / emulator
-EMULATOR_AVD = os.getenv("ANDROID_AVD") or os.getenv("AVD_NAME") or "Pixel_2_API_30"
+EMULATOR_AVD = os.getenv("ANDROID_AVD") or os.getenv("AVD_NAME") or "test"
 ADB_TARGET_DEVICE = os.getenv("ANDROID_DEVICE_ID") or os.getenv("ANDROID_SERIAL") or "emulator-5554"
 
 # Appium
