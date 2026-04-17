@@ -447,6 +447,9 @@ def are_screens_similar(
     elif screen2 is None and isinstance(activity1, dict):
         fp1 = _coerce_fingerprint(screen1)
         fp2 = _coerce_fingerprint(activity1)
+    elif screen2 is None and isinstance(activity1, str) and _looks_like_hash(activity1):
+        fp1 = _coerce_fingerprint(screen1)
+        fp2 = _coerce_fingerprint(activity1)
     elif screen2 is None:
         return False
     else:
