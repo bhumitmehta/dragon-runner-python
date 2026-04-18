@@ -146,10 +146,6 @@ class KnowledgeBase:
         R = Query()
         return self.runs.search(R.app_package == app_package)
 
-    def get_all_runs(self) -> List[Dict[str, Any]]:
-        """Return all runs."""
-        return self.runs.all()
-
     def get_discoveries_for_app(self, app_package: str, n: int = 50) -> List[Dict[str, Any]]:
         """Return recent discoveries for a specific app."""
         D = Query()
@@ -171,11 +167,6 @@ class KnowledgeBase:
             (D.app_package == app_package) &
             (D.type.one_of(["bug", "visual_bug", "crash"]))
         )
-
-    def get_all_bugs(self) -> List[Dict[str, Any]]:
-        """Return all bug discoveries."""
-        D = Query()
-        return self.discoveries.search(D.type.one_of(["bug", "visual_bug", "crash"]))
 
     def get_element_behaviors_for_app(self, app_package: str) -> List[Dict[str, Any]]:
         EB = Query()
@@ -357,13 +348,11 @@ class KnowledgeBase:
     # ── Navigation scripts ───────────────────────────────────────────
 
     def add_nav_script(self, name: str, target_screen_sig: str,
-                       steps: List[Dict[str, Any]], *, verified: bool = False,
-                       script_path: str = "") -> int:
+                       steps: List[Dict[str, Any]], *, verified: bool = False) -> int:
         """Store a navigation script. Returns the TinyDB doc_id."""
         doc_id = self.nav_scripts.insert({
             "name": name, "target_screen_sig": target_screen_sig,
             "steps": steps, "verified": verified,
-            "script_path": script_path, "script_framework": "playwright",
             "last_verified": "", "created_at": datetime.utcnow().isoformat() + "Z",
             "success_count": 0, "fail_count": 0, "run_id": self.run_id,
             "app_package": self.current_app_package,
@@ -409,8 +398,6 @@ class KnowledgeBase:
         script.setdefault("last_result", "")
         script.setdefault("last_run", "")
         script.setdefault("bugs_found", [])
-        script.setdefault("script_path", "")
-        script.setdefault("script_framework", "playwright")
         doc_id = self.verification_scripts.insert(script)
         self._add_discovery("verification_script", f"Test: {script.get('name', '?')}",
                             {"doc_id": doc_id})

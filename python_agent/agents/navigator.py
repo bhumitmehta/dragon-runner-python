@@ -221,66 +221,60 @@ Return ONLY valid JSON (no markdown):
 
         try:
             if action == "click":
-                element = self._find_element(locator_type, locator_value, ui_context, reason)
+                element = self._find_element(locator_type, locator_value)
                 if not element:
                     # Try scrolling to find the element
-                    element = self._scroll_and_find(locator_type, locator_value, reason)
+                    element = self._scroll_and_find(locator_type, locator_value)
                 if element:
                     element.click()
                     result["success"] = True
-                    result["description"] = f"Clicked {locator_value or reason}"
+                    result["description"] = f"Clicked {locator_value}"
                 else:
-                    # Coordinate fallback: extract bounds from XML and tap.
+                    # Coordinate fallback: extract bounds from XML and tap
                     page_src = ui_context.get("page_source", "")
-                    coords = find_element_bounds(page_src, locator_type or "resource_id", locator_value or reason or "")
-                    if not coords and reason:
-                        coords = find_element_bounds(page_src, "text", reason)
+                    coords = find_element_bounds(page_src, locator_type or "resource_id", locator_value or "")
                     if coords:
                         cx, cy = coords
                         ok = self.controller.tap_at(cx, cy)
                         if ok:
                             result["success"] = True
-                            result["description"] = f"Clicked fallback target at ({cx},{cy})"
+                            result["description"] = f"Clicked {locator_value} at ({cx},{cy})"
                         else:
-                            result["description"] = f"Tap failed at ({cx},{cy}) for {locator_value or reason}"
+                            result["description"] = f"Tap failed at ({cx},{cy}) for {locator_value}"
                     else:
-                        result["description"] = f"Element not found: {locator_value or reason}"
+                        result["description"] = f"Element not found: {locator_value}"
 
             elif action == "input":
-                element = self._find_element(locator_type, locator_value, ui_context, reason)
+                element = self._find_element(locator_type, locator_value)
                 if not element:
                     # Try scrolling to find the element
-                    element = self._scroll_and_find(locator_type, locator_value, reason)
+                    element = self._scroll_and_find(locator_type, locator_value)
                 if element and text:
                     input_ok = self._safe_input(element, text)
                     if input_ok:
                         result["success"] = True
-                        result["description"] = f"Input '{text}' into {locator_value or reason}"
+                        result["description"] = f"Input '{text}' into {locator_value}"
                     else:
-                        result["description"] = f"Could not input text into {locator_value or reason}"
+                        result["description"] = f"Could not input text into {locator_value}"
                 elif not text:
                     result["description"] = "No text specified for input action"
                 else:
                     # Coordinate fallback: try plan-supplied coords, then XML bounds
                     cx, cy = plan_cx, plan_cy
-                    page_src = ui_context.get("page_source", "")
                     if not (cx and cy):
+                        page_src = ui_context.get("page_source", "")
                         coords = find_element_bounds(page_src, locator_type or "resource_id", locator_value or "")
-                        if coords:
-                            cx, cy = coords
-                    if not (cx and cy) and reason:
-                        coords = find_element_bounds(page_src, "text", reason)
                         if coords:
                             cx, cy = coords
                     if cx and cy and text:
                         ok = self.controller.type_at_coordinates(cx, cy, text)
                         if ok:
                             result["success"] = True
-                            result["description"] = f"Input '{text}' at ({cx},{cy}) for {locator_value or reason}"
+                            result["description"] = f"Input '{text}' at ({cx},{cy}) for {locator_value}"
                         else:
-                            result["description"] = f"Coordinate input failed at ({cx},{cy}) for {locator_value or reason}"
+                            result["description"] = f"Coordinate input failed at ({cx},{cy}) for {locator_value}"
                     else:
-                        result["description"] = f"Input element not found: {locator_value or reason}"
+                        result["description"] = f"Input element not found: {locator_value}"
 
             elif action == "scroll":
                 if direction:
@@ -291,15 +285,15 @@ Return ONLY valid JSON (no markdown):
                     result["description"] = "No scroll direction specified"
 
             elif action == "long_press":
-                element = self._find_element(locator_type, locator_value, ui_context, reason)
+                element = self._find_element(locator_type, locator_value)
                 if not element:
-                    element = self._scroll_and_find(locator_type, locator_value, reason)
+                    element = self._scroll_and_find(locator_type, locator_value)
                 if element:
                     ok = self.controller.long_press(element=element)
                     result["success"] = ok
-                    result["description"] = f"Long pressed {locator_value or reason}"
+                    result["description"] = f"Long pressed {locator_value}"
                 else:
-                    result["description"] = f"Element not found for long press: {locator_value or reason}"
+                    result["description"] = f"Element not found for long press: {locator_value}"
 
             elif action == "back":
                 self.controller.press_back()
@@ -346,20 +340,6 @@ Return ONLY valid JSON (no markdown):
             logger.error("Action execution error: %s", e, exc_info=True)
 
         return result
-
-    def _find_element_by_description(self, description: str):
-        if not description:
-            return None
-        safe = description.replace('"', '\\"')
-        element = self.controller.find_by_android_uiautomator(
-            f'new UiSelector().textContains("{safe}")'
-        )
-        if element:
-            return element
-        element = self.controller.find_by_android_uiautomator(
-            f'new UiSelector().descriptionContains("{safe}")'
-        )
-        return element
 
     def _safe_input(self, element, text: str) -> bool:
         """Try multiple strategies to input text into an element."""
@@ -409,62 +389,36 @@ Return ONLY valid JSON (no markdown):
         logger.warning("All input strategies failed for element")
         return False
 
-    def _scroll_and_find(self, locator_type, locator_value, description: Optional[str] = None):
+    def _scroll_and_find(self, locator_type, locator_value):
         """Scroll down up to 3 times to find an element not currently visible."""
-        if not locator_value and not description:
+        if not locator_value:
             return None
         # Try UiScrollable for text-based locators
-        if locator_type == "text" and locator_value:
+        if locator_type == "text":
             el = self.controller.scroll_to_text(locator_value)
-            if el:
-                return el
-        if description:
-            el = self.controller.scroll_to_text(description)
             if el:
                 return el
         # Try scrolling down to find by any locator
         for _ in range(3):
             self.controller.scroll("down")
             time.sleep(0.3)
-            el = self._find_element(locator_type, locator_value, None, description)
+            el = self._find_element(locator_type, locator_value)
             if el:
                 return el
         return None
 
     # ── Element lookup ───────────────────────────────────────────────
 
-    def _find_element(
-        self,
-        locator_type: Optional[str],
-        value: Optional[str],
-        ui_context: Optional[Dict[str, Any]] = None,
-        description: Optional[str] = None,
-    ):
+    def _find_element(self, locator_type: Optional[str], value: Optional[str]):
         if not locator_type or not value:
             return None
         if locator_type == "accessibility_id":
-            element = self.controller.find_by_accessibility_id(value)
+            return self.controller.find_by_accessibility_id(value)
         elif locator_type == "resource_id":
-            element = self.controller.find_by_id(value)
+            return self.controller.find_by_id(value)
         elif locator_type == "text":
             safe = value.replace('"', '\\"')
-            element = self.controller.find_by_android_uiautomator(
+            return self.controller.find_by_android_uiautomator(
                 f'new UiSelector().text("{safe}")'
             )
-        else:
-            element = None
-
-        if element:
-            return element
-
-        if description:
-            element = self._find_element_by_description(description)
-            if element:
-                return element
-
-        if ui_context and locator_type == "resource_id":
-            element = self._find_element_by_description(value)
-            if element:
-                return element
-
         return None
