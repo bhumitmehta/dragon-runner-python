@@ -552,18 +552,24 @@ def get_screen_screenshot(sig: str):
 # ════════════════════════════════════════════════════════════════════
 
 @app.get("/api/runs", tags=["Dashboard"])
-def list_runs(app: str = Query(...)):
+def list_runs(app: Optional[str] = Query(None)):
     """List all agent runs (past and current) for the given app."""
     kb = _get_kb()
-    return kb.get_runs_for_app(app)
+    if app:
+        return kb.get_runs_for_app(app)
+    return kb.get_all_runs()
 
 
 @app.get("/api/bugs", tags=["Dashboard"])
-def list_bugs(app: str = Query(...)):
+def list_bugs(app: Optional[str] = Query(None)):
     """Return all bugs found for the given app."""
     kb = _get_kb()
-    bug_discoveries = kb.get_bugs_for_app(app)
-    all_scripts = kb.get_verification_scripts_for_app(app)
+    if app:
+        bug_discoveries = kb.get_bugs_for_app(app)
+        all_scripts = kb.get_verification_scripts_for_app(app)
+    else:
+        bug_discoveries = kb.get_all_bugs()
+        all_scripts = kb.get_all_verification_scripts()
     # Also collect bugs from verification scripts
     script_bugs = []
     for vs in all_scripts:

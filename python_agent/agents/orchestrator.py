@@ -51,6 +51,7 @@ from .doc_ingestion import DocIngestionAgent
 from .script_generator import ScriptGeneratorAgent
 from .script_executor import ScriptExecutorAgent
 from .execution_engine import ExecutionEngine
+from ..script_exporter import export_script_to_playwright
 from ..knowledge_base import KnowledgeBase
 
 
@@ -1568,6 +1569,14 @@ Screen name:"""
                     logger.warning("Could not generate script for %s -- skipping", feat_name)
                     continue
 
+                # Export the generated script to a Playwright test file so it is stored
+                # in a reusable test framework format and can be checked into source.
+                try:
+                    export_path = export_script_to_playwright(v_script)
+                    v_script["script_path"] = str(export_path)
+                except Exception as exc:
+                    logger.warning("Failed to export Playwright script: %s", exc)
+
                 # Store in KB
                 v_script["feature_id"] = feat_id
                 v_doc_id = self.kb.add_verification_script(v_script)
@@ -1622,11 +1631,18 @@ Screen name:"""
                 if nav_script and nav_res:
                     final_sig = nav_res.get("final_signature", "")
                     if final_sig:
+                        try:
+                            nav_export_path = export_script_to_playwright(nav_script)
+                            nav_script["script_path"] = str(nav_export_path)
+                        except Exception as exc:
+                            logger.warning("Failed to export Playwright nav script: %s", exc)
+
                         nav_doc_id = self.kb.add_nav_script(
                             f"Navigate to {feat_name}",
                             final_sig,
                             nav_script.get("steps", []),
                             verified=nav_res.get("success", False),
+                            script_path=nav_script.get("script_path", ""),
                         )
                         logger.info("Stored nav script (doc_id=%d, verified=%s)",
                                     nav_doc_id, nav_res.get("success", False))

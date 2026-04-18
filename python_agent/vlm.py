@@ -5,7 +5,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
-from google import genai
+# from google import genai
 from PIL import Image
 
 from . import config
